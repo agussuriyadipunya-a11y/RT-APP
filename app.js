@@ -545,28 +545,46 @@ document.getElementById('form-bpjs')?.addEventListener('submit', async function(
     const bpjsKey = `${rtTarget}_rtku_bpjs`;
     let arr = await firebaseGet(bpjsKey) || [];
 
-    const now = new Date();
-    const tgl = now.toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' });
+    if (window.editContext && window.editContext.type === 'bpjs') {
+        const targetRt = window.editContext.rtUser;
+        const targetKey = `${targetRt}_rtku_bpjs`;
+        let editArr = await firebaseGet(targetKey) || [];
+        const idx = window.editContext.index;
+        if (editArr[idx]) {
+            editArr[idx].nama = document.getElementById('bpjs-nama').value;
+            editArr[idx].nik = document.getElementById('bpjs-nik').value;
+            editArr[idx].nokk = document.getElementById('bpjs-nokk').value;
+            editArr[idx].tglLahir = document.getElementById('bpjs-tgl-lahir').value;
+            editArr[idx].alamat = document.getElementById('bpjs-alamat').value;
+            editArr[idx].ponsel = document.getElementById('bpjs-ponsel').value;
+            editArr[idx].berkas = { ktp: cekKtp, kk: cekKk, sktm: cekSktm };
+            await firebasePut(targetKey, editArr);
+        }
+        await swalAlert('Data pengajuan BPJS berhasil diubah!', 'success', 'Diperbarui');
+    } else {
+        const now = new Date();
+        const tgl = now.toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' });
+        arr.push({
+            tgl,
+            nama: document.getElementById('bpjs-nama').value,
+            nik: document.getElementById('bpjs-nik').value,
+            nokk: document.getElementById('bpjs-nokk').value,
+            tglLahir: document.getElementById('bpjs-tgl-lahir').value,
+            alamat: document.getElementById('bpjs-alamat').value,
+            ponsel: document.getElementById('bpjs-ponsel').value,
+            berkas: { ktp: cekKtp, kk: cekKk, sktm: cekSktm },
+            status: 'WAITING',
+            _rtUser: rtTarget
+        });
+        await firebasePut(bpjsKey, arr);
+        await swalAlert('Pengajuan BPJS Kesehatan berhasil dikirim!', 'success', 'Terkirim');
+    }
 
-    arr.push({
-        tgl,
-        nama: document.getElementById('bpjs-nama').value,
-        nik: document.getElementById('bpjs-nik').value,
-        nokk: document.getElementById('bpjs-nokk').value,
-        tglLahir: document.getElementById('bpjs-tgl-lahir').value,
-        alamat: document.getElementById('bpjs-alamat').value,
-        ponsel: document.getElementById('bpjs-ponsel').value,
-        berkas: { ktp: cekKtp, kk: cekKk, sktm: cekSktm },
-        status: 'WAITING',
-        _rtUser: rtTarget
-    });
-
-    await firebasePut(bpjsKey, arr);
     this.reset();
     document.getElementById('bpjs-form-area').style.display = 'none';
+    if (typeof resetEditContext === 'function') resetEditContext();
     await renderBpjs();
     showLoading(false);
-    await swalAlert('Pengajuan BPJS Kesehatan berhasil dikirim!', 'success', 'Terkirim');
 });
 
 async function renderBpjs() {
@@ -610,21 +628,30 @@ async function renderBpjs() {
             item.berkas?.sktm ? '<span style="color:var(--success-color);"><i class="fa-solid fa-check-circle"></i> SKTM</span>': '<span style="color:var(--danger-color);"><i class="fa-solid fa-times-circle"></i> SKTM</span>'
         ].join('<br>');
 
-        let statusBadge = '';
-        if (item.status === 'WAITING') statusBadge = '<span style="background:#f59e0b;color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-clock"></i> WAITING</span>';
-        else if (item.status === 'PROCESS') statusBadge = '<span style="background:#3b82f6;color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-spinner"></i> PROCESS</span>';
-        else if (item.status === 'DONE') statusBadge = '<span style="background:var(--success-color);color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-check"></i> DONE</span>';
+        let statusHtml = '';
+        if (item.status === 'WAITING') statusHtml = '<span style="background:#f59e0b;color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-clock"></i> WAITING</span>';
+        else if (item.status === 'PROCESS') statusHtml = '<span style="background:#3b82f6;color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-spinner"></i> PROCESS</span>';
+        else if (item.status === 'DONE') statusHtml = '<span style="background:var(--success-color);color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-check"></i> DONE</span>';
 
-        let aksiHtml = '';
         if (currentUser === 'admin') {
-            aksiHtml = `
-                <select class="form-control" style="font-size:0.75rem; padding:0.2rem 0.4rem; width:auto;" onchange="ubahStatusBpjs('${item._rtUser}', ${item._idx}, this.value)">
+            statusHtml = `
+                <select class="form-control" style="padding:0.2rem; font-size:0.75rem; width:100px; font-weight:bold;" 
+                        onchange="ubahStatusBpjs('${item._rtUser}', ${item._idx}, this.value)">
                     <option value="WAITING" ${item.status==='WAITING'?'selected':''}>WAITING</option>
                     <option value="PROCESS" ${item.status==='PROCESS'?'selected':''}>PROCESS</option>
                     <option value="DONE" ${item.status==='DONE'?'selected':''}>DONE</option>
                 </select>
-                <button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;margin-top:0.3rem;" onclick="hapusBpjs('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i></button>
             `;
+        }
+
+        let aksiHtml = '';
+        if (currentUser === 'admin') {
+            aksiHtml = `
+            <div style="display:flex; gap:0.3rem;">
+                <button class="btn btn-primary" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="editData('bpjs', '${item._rtUser}', ${item._idx})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn btn-secondary" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="viewDetail('bpjs', '${item._rtUser}', ${item._idx})" title="View"><i class="fa-solid fa-eye"></i></button>
+                <button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="hapusBpjs('${item._rtUser}', ${item._idx})" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
         } else {
             aksiHtml = '<span style="font-size:0.75rem; color:var(--text-secondary);"><i class="fa-solid fa-eye"></i> Lihat Saja</span>';
         }
@@ -639,7 +666,7 @@ async function renderBpjs() {
             <td>${item.tglLahir}</td>
             <td><a href="tel:${item.ponsel}" style="color:var(--primary-color);text-decoration:none;"><i class="fa-solid fa-phone" style="font-size:0.7rem;"></i> ${item.ponsel}</a></td>
             <td>${berkasIcons}</td>
-            <td>${statusBadge}</td>
+            <td>${statusHtml}</td>
             <td>${aksiHtml}</td>
         </tr>`;
     });
@@ -690,26 +717,43 @@ document.getElementById('form-kependudukan')?.addEventListener('submit', async f
     const kepKey = `${rtTarget}_rtku_kependudukan`;
     let arr = await firebaseGet(kepKey) || [];
 
-    const dataBaru = {
-        id: 'KEP-' + new Date().getTime(),
-        tanggal: new Date().toLocaleDateString('id-ID'),
-        jenis: document.getElementById('kependudukan-jenis').value,
-        nama: document.getElementById('kependudukan-nama').value,
-        nik: document.getElementById('kependudukan-nik').value,
-        nokk: document.getElementById('kependudukan-nokk').value,
-        ponsel: document.getElementById('kependudukan-ponsel').value,
-        keterangan: document.getElementById('kependudukan-keterangan').value,
-        status: 'WAITING'
-    };
-
-    arr.push(dataBaru);
-    await firebasePut(kepKey, arr);
+    if (window.editContext && window.editContext.type === 'kependudukan') {
+        const targetRt = window.editContext.rtUser;
+        const targetKey = `${targetRt}_rtku_kependudukan`;
+        let editArr = await firebaseGet(targetKey) || [];
+        const idx = window.editContext.index;
+        if (editArr[idx]) {
+            editArr[idx].jenis = document.getElementById('kependudukan-jenis').value;
+            editArr[idx].nama = document.getElementById('kependudukan-nama').value;
+            editArr[idx].nik = document.getElementById('kependudukan-nik').value;
+            editArr[idx].nokk = document.getElementById('kependudukan-nokk').value;
+            editArr[idx].ponsel = document.getElementById('kependudukan-ponsel').value;
+            editArr[idx].keterangan = document.getElementById('kependudukan-keterangan').value;
+            await firebasePut(targetKey, editArr);
+        }
+        await swalAlert('Data pengajuan Kependudukan berhasil diubah!', 'success', 'Diperbarui');
+    } else {
+        const dataBaru = {
+            id: 'KEP-' + new Date().getTime(),
+            tanggal: new Date().toLocaleDateString('id-ID'),
+            jenis: document.getElementById('kependudukan-jenis').value,
+            nama: document.getElementById('kependudukan-nama').value,
+            nik: document.getElementById('kependudukan-nik').value,
+            nokk: document.getElementById('kependudukan-nokk').value,
+            ponsel: document.getElementById('kependudukan-ponsel').value,
+            keterangan: document.getElementById('kependudukan-keterangan').value,
+            status: 'WAITING'
+        };
+        arr.push(dataBaru);
+        await firebasePut(kepKey, arr);
+        await swalAlert('Pengajuan Update Kependudukan berhasil dikirim!', 'success', 'Terkirim');
+    }
 
     this.reset();
     document.getElementById('kependudukan-form-area').style.display = 'none';
+    if (typeof resetEditContext === 'function') resetEditContext();
     await renderKependudukan();
     showLoading(false);
-    await swalAlert('Pengajuan Update Kependudukan berhasil dikirim!', 'success', 'Terkirim');
 });
 
 async function renderKependudukan() {
@@ -766,7 +810,12 @@ async function renderKependudukan() {
 
         let aksiHtml = '';
         if (currentUser === 'admin') {
-            aksiHtml = `<button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;margin-top:0.3rem;" onclick="hapusKependudukan('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i></button>`;
+            aksiHtml = `
+            <div style="display:flex; gap:0.3rem;">
+                <button class="btn btn-primary" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="editData('kependudukan', '${item._rtUser}', ${item._idx})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn btn-secondary" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="viewDetail('kependudukan', '${item._rtUser}', ${item._idx})" title="View"><i class="fa-solid fa-eye"></i></button>
+                <button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="hapusKependudukan('${item._rtUser}', ${item._idx})" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
         } else {
             aksiHtml = '<span style="font-size:0.75rem; color:var(--text-secondary);"><i class="fa-solid fa-eye"></i> Lihat Saja</span>';
         }
@@ -830,33 +879,57 @@ document.getElementById('form-dokumen')?.addEventListener('submit', async functi
     const dokKey = `${rtTarget}_rtku_layanan_dokumen`;
     let arr = await firebaseGet(dokKey) || [];
 
-    const dataBaru = {
-        id: 'DOK-' + new Date().getTime(),
-        tanggal: new Date().toLocaleDateString('id-ID'),
-        jenis: document.getElementById('dokumen-jenis').value,
-        nama: document.getElementById('dokumen-nama').value,
-        nik: document.getElementById('dokumen-nik').value,
-        tempatLahir: document.getElementById('dokumen-tempat-lahir').value,
-        tglLahir: document.getElementById('dokumen-tgl-lahir').value,
-        ponsel: document.getElementById('dokumen-ponsel').value,
-        alamat: document.getElementById('dokumen-alamat').value,
-        namaUsaha: document.getElementById('dokumen-nama-usaha').value,
-        jenisUsaha: document.getElementById('dokumen-jenis-usaha').value,
-        lokasiUsaha: document.getElementById('dokumen-lokasi-usaha').value,
-        modal: document.getElementById('dokumen-modal').value,
-        penghasilan: document.getElementById('dokumen-penghasilan').value,
-        lamaUsaha: document.getElementById('dokumen-lama-usaha').value,
-        status: 'WAITING'
-    };
-
-    arr.push(dataBaru);
-    await firebasePut(dokKey, arr);
+    if (window.editContext && window.editContext.type === 'dokumen') {
+        const targetRt = window.editContext.rtUser;
+        const targetKey = `${targetRt}_rtku_layanan_dokumen`;
+        let editArr = await firebaseGet(targetKey) || [];
+        const idx = window.editContext.index;
+        if (editArr[idx]) {
+            editArr[idx].jenis = document.getElementById('dokumen-jenis').value;
+            editArr[idx].nama = document.getElementById('dokumen-nama').value;
+            editArr[idx].nik = document.getElementById('dokumen-nik').value;
+            editArr[idx].tempatLahir = document.getElementById('dokumen-tempat-lahir').value;
+            editArr[idx].tglLahir = document.getElementById('dokumen-tgl-lahir').value;
+            editArr[idx].ponsel = document.getElementById('dokumen-ponsel').value;
+            editArr[idx].alamat = document.getElementById('dokumen-alamat').value;
+            editArr[idx].namaUsaha = document.getElementById('dokumen-nama-usaha').value;
+            editArr[idx].jenisUsaha = document.getElementById('dokumen-jenis-usaha').value;
+            editArr[idx].lokasiUsaha = document.getElementById('dokumen-lokasi-usaha').value;
+            editArr[idx].modal = document.getElementById('dokumen-modal').value;
+            editArr[idx].penghasilan = document.getElementById('dokumen-penghasilan').value;
+            editArr[idx].lamaUsaha = document.getElementById('dokumen-lama-usaha').value;
+            await firebasePut(targetKey, editArr);
+        }
+        await swalAlert('Data pengajuan Layanan Dokumen berhasil diubah!', 'success', 'Diperbarui');
+    } else {
+        const dataBaru = {
+            id: 'DOK-' + new Date().getTime(),
+            tanggal: new Date().toLocaleDateString('id-ID'),
+            jenis: document.getElementById('dokumen-jenis').value,
+            nama: document.getElementById('dokumen-nama').value,
+            nik: document.getElementById('dokumen-nik').value,
+            tempatLahir: document.getElementById('dokumen-tempat-lahir').value,
+            tglLahir: document.getElementById('dokumen-tgl-lahir').value,
+            ponsel: document.getElementById('dokumen-ponsel').value,
+            alamat: document.getElementById('dokumen-alamat').value,
+            namaUsaha: document.getElementById('dokumen-nama-usaha').value,
+            jenisUsaha: document.getElementById('dokumen-jenis-usaha').value,
+            lokasiUsaha: document.getElementById('dokumen-lokasi-usaha').value,
+            modal: document.getElementById('dokumen-modal').value,
+            penghasilan: document.getElementById('dokumen-penghasilan').value,
+            lamaUsaha: document.getElementById('dokumen-lama-usaha').value,
+            status: 'WAITING'
+        };
+        arr.push(dataBaru);
+        await firebasePut(dokKey, arr);
+        await swalAlert('Pengajuan Layanan Dokumen Usaha berhasil dikirim!', 'success', 'Terkirim');
+    }
 
     this.reset();
     document.getElementById('dokumen-form-area').style.display = 'none';
+    if (typeof resetEditContext === 'function') resetEditContext();
     await renderDokumen();
     showLoading(false);
-    await swalAlert('Pengajuan Layanan Dokumen Usaha berhasil dikirim!', 'success', 'Terkirim');
 });
 
 async function renderDokumen() {
@@ -913,7 +986,12 @@ async function renderDokumen() {
 
         let aksiHtml = '';
         if (currentUser === 'admin') {
-            aksiHtml = `<button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;margin-top:0.3rem;" onclick="hapusDokumen('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i></button>`;
+            aksiHtml = `
+            <div style="display:flex; gap:0.3rem;">
+                <button class="btn btn-primary" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="editData('dokumen', '${item._rtUser}', ${item._idx})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn btn-secondary" style="padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="viewDetail('dokumen', '${item._rtUser}', ${item._idx})" title="View"><i class="fa-solid fa-eye"></i></button>
+                <button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="hapusDokumen('${item._rtUser}', ${item._idx})" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
         } else {
             aksiHtml = '<span style="font-size:0.75rem; color:var(--text-secondary);"><i class="fa-solid fa-eye"></i> Lihat Saja</span>';
         }
@@ -973,6 +1051,164 @@ window.hapusDokumen = async function(rtUser, index) {
     await renderDokumen();
     showLoading(false);
     await swalAlert('Data pengajuan berhasil dihapus.', 'success');
+};
+
+// ======================== VIEW DETAIL (SUPERADMIN) ========================
+window.viewDetail = async function(type, rtUser, index) {
+    showLoading(true);
+    let key = '';
+    let title = '';
+    if (type === 'bpjs') {
+        key = `${rtUser}_rtku_bpjs`;
+        title = 'Detail Pengajuan BPJS Kesehatan';
+    } else if (type === 'kependudukan') {
+        key = `${rtUser}_rtku_kependudukan`;
+        title = 'Detail Pengajuan Update Kependudukan';
+    } else if (type === 'dokumen') {
+        key = `${rtUser}_rtku_layanan_dokumen`;
+        title = 'Detail Pengajuan Dokumen Usaha';
+    }
+
+    const arr = await firebaseGet(key) || [];
+    const data = arr[index];
+    showLoading(false);
+
+    if (!data) {
+        await swalAlert('Data tidak ditemukan', 'error');
+        return;
+    }
+
+    document.getElementById('view-detail-title').innerHTML = `<i class="fa-solid fa-eye" style="color:var(--primary-color);"></i> ${title}`;
+    
+    let html = '';
+    
+    const formatLabel = (k) => {
+        const labels = {
+            id: 'ID Transaksi', tanggal: 'Tanggal', nama: 'Nama Pemohon', nik: 'NIK', nokk: 'No KK',
+            tglLahir: 'Tanggal Lahir', tempatLahir: 'Tempat Lahir', ponsel: 'No Ponsel', alamat: 'Alamat Lengkap',
+            keterangan: 'Keterangan', jenis: 'Jenis Layanan', namaUsaha: 'Nama Usaha', jenisUsaha: 'Jenis Usaha',
+            lokasiUsaha: 'Lokasi Usaha', modal: 'Modal Usaha', penghasilan: 'Penghasilan',
+            lamaUsaha: 'Lama Usaha', status: 'Status Pengajuan', berkas: 'Kelengkapan Berkas'
+        };
+        return labels[k] || k.charAt(0).toUpperCase() + k.slice(1);
+    };
+
+    const formatValue = (k, v) => {
+        if (k === 'modal' || k === 'penghasilan') return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v);
+        if (k === 'berkas' && typeof v === 'object') {
+            return Object.entries(v).map(([subK, subV]) => `${subK.toUpperCase()}: ${subV ? '<i class="fa-solid fa-check text-success"></i> Ada' : '<i class="fa-solid fa-times text-danger"></i> Tidak Ada'}`).join('<br>');
+        }
+        if (k === 'status') {
+            let badgeColor = v === 'WAITING' ? '#f59e0b' : (v === 'PROCESS' ? '#3b82f6' : '#10b981');
+            return `<span class="badge" style="background:${badgeColor}; color:#fff;">${v}</span>`;
+        }
+        return v;
+    };
+
+    const keysToExclude = ['_rtUser', '_idx', '_rtName'];
+    for (const [k, v] of Object.entries(data)) {
+        if (keysToExclude.includes(k)) continue;
+        html += `
+            <tr>
+                <td style="width: 40%; font-weight:600; background:#f9fafb; color:var(--text-secondary); border-bottom:1px solid var(--border-color); padding:0.8rem;">${formatLabel(k)}</td>
+                <td style="font-weight:500; border-bottom:1px solid var(--border-color); padding:0.8rem;">${formatValue(k, v)}</td>
+            </tr>
+        `;
+    }
+
+    document.getElementById('view-detail-body').innerHTML = html;
+    showModal('modal-view-detail');
+};
+
+// ======================== EDIT DATA (SUPERADMIN) ========================
+window.editContext = null;
+
+window.editData = async function(type, rtUser, index) {
+    showLoading(true);
+    let key = '';
+    if (type === 'bpjs') key = `${rtUser}_rtku_bpjs`;
+    else if (type === 'kependudukan') key = `${rtUser}_rtku_kependudukan`;
+    else if (type === 'dokumen') key = `${rtUser}_rtku_layanan_dokumen`;
+
+    const arr = await firebaseGet(key) || [];
+    const data = arr[index];
+    showLoading(false);
+
+    if (!data) {
+        await swalAlert('Data tidak ditemukan', 'error');
+        return;
+    }
+
+    window.editContext = { type, rtUser, index, data };
+
+    if (type === 'bpjs') {
+        document.getElementById('bpjs-form-area').style.display = 'block';
+        document.getElementById('bpjs-nama').value = data.nama || '';
+        document.getElementById('bpjs-nik').value = data.nik || '';
+        document.getElementById('bpjs-nokk').value = data.nokk || '';
+        document.getElementById('bpjs-tgl-lahir').value = data.tglLahir || '';
+        document.getElementById('bpjs-alamat').value = data.alamat || '';
+        document.getElementById('bpjs-ponsel').value = data.ponsel || '';
+        
+        document.getElementById('bpjs-cek-ktp').checked = data.berkas?.ktp || false;
+        document.getElementById('bpjs-cek-kk').checked = data.berkas?.kk || false;
+        document.getElementById('bpjs-cek-sktm').checked = data.berkas?.sktm || false;
+        
+        const btn = document.querySelector('#form-bpjs button[type="submit"]');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> UPDATE';
+        
+        document.getElementById('bpjs-form-area').scrollIntoView({ behavior: 'smooth' });
+    }
+    else if (type === 'kependudukan') {
+        document.getElementById('kependudukan-form-area').style.display = 'block';
+        document.getElementById('kependudukan-jenis').value = data.jenis || '';
+        document.getElementById('kependudukan-nama').value = data.nama || '';
+        document.getElementById('kependudukan-nik').value = data.nik || '';
+        document.getElementById('kependudukan-nokk').value = data.nokk || '';
+        document.getElementById('kependudukan-ponsel').value = data.ponsel || '';
+        document.getElementById('kependudukan-keterangan').value = data.keterangan || '';
+        
+        document.getElementById('kependudukan-cek-pengantar').checked = true;
+        document.getElementById('kependudukan-cek-ktp').checked = true;
+        document.getElementById('kependudukan-cek-kk').checked = true;
+
+        const btn = document.querySelector('#form-kependudukan button[type="submit"]');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> UPDATE';
+
+        document.getElementById('kependudukan-form-area').scrollIntoView({ behavior: 'smooth' });
+    }
+    else if (type === 'dokumen') {
+        document.getElementById('dokumen-form-area').style.display = 'block';
+        document.getElementById('dokumen-jenis').value = data.jenis || '';
+        document.getElementById('dokumen-nama').value = data.nama || '';
+        document.getElementById('dokumen-nik').value = data.nik || '';
+        document.getElementById('dokumen-tempat-lahir').value = data.tempatLahir || '';
+        document.getElementById('dokumen-tgl-lahir').value = data.tglLahir || '';
+        document.getElementById('dokumen-ponsel').value = data.ponsel || '';
+        document.getElementById('dokumen-alamat').value = data.alamat || '';
+        
+        document.getElementById('dokumen-nama-usaha').value = data.namaUsaha || '';
+        document.getElementById('dokumen-jenis-usaha').value = data.jenisUsaha || '';
+        document.getElementById('dokumen-lokasi-usaha').value = data.lokasiUsaha || '';
+        document.getElementById('dokumen-modal').value = data.modal || '';
+        document.getElementById('dokumen-penghasilan').value = data.penghasilan || '';
+        document.getElementById('dokumen-lama-usaha').value = data.lamaUsaha || '';
+
+        const btn = document.querySelector('#form-dokumen button[type="submit"]');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-save"></i> UPDATE';
+
+        document.getElementById('dokumen-form-area').scrollIntoView({ behavior: 'smooth' });
+    }
+};
+
+window.resetEditContext = function() {
+    window.editContext = null;
+    document.querySelectorAll('form').forEach(f => f.reset());
+    document.querySelectorAll('.btn-primary[type="submit"]').forEach(btn => {
+        if (btn.innerHTML.includes('UPDATE')) {
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> KIRIM';
+        }
+    });
 };
 
 // ======================== NAVIGATION ========================
