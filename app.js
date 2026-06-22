@@ -147,7 +147,7 @@ window.toggleUserStatus = async function(username, status) {
     if (users[username]) {
         users[username].verified = status;
         await firebasePut('rtku_users', users);
-        await renderAdminManagement();
+        await renderUserManagement();
         showLoading(false);
         await swalAlert(`Akun ${username} berhasil di-${action}!`, 'success');
     } else {
@@ -163,7 +163,7 @@ window.toggleUserRole = async function(username, role) {
     if (users[username]) {
         users[username].role = role;
         await firebasePut('rtku_users', users);
-        await renderAdminManagement();
+        await renderUserManagement();
         showLoading(false);
         await swalAlert(`Role akun ${username} berhasil diubah menjadi ${role}!`, 'success');
     } else {
@@ -1479,6 +1479,11 @@ async function renderUserManagement() {
         count++;
         const isVerified = users[u].verified !== false;
         const badge = isVerified ? `<span class="badge badge-primary" style="margin-top:4px;display:inline-block;">Aktif</span>` : `<span class="badge" style="background:#f59e0b;color:#fff;margin-top:4px;display:inline-block;">Menunggu Verifikasi</span>`;
+        const userRole = users[u].role || 'PRO';
+        const roleBadge = userRole === 'VIP' ? 
+            `<span class="badge" style="background:var(--primary-color);color:#fff;margin-top:4px;display:inline-block;"><i class="fa-solid fa-crown"></i> VIP</span>` : 
+            `<span class="badge" style="background:#9ca3af;color:#fff;margin-top:4px;display:inline-block;">PRO</span>`;
+
         tbody.innerHTML += `
         <tr>
             <td>
@@ -1490,6 +1495,7 @@ async function renderUserManagement() {
             <td>
                 <div style="font-weight:600;">${users[u].name}</div>
                 ${badge}
+                ${roleBadge}
             </td>
             <td>
                 <div class="btn-action-group">
@@ -1497,6 +1503,15 @@ async function renderUserManagement() {
                     <button class="btn btn-primary" onclick="verifyUser('${u}')">
                         <i class="fa-solid fa-check"></i> Verifikasi
                     </button>` : ''}
+                    
+                    ${userRole === 'VIP' ? 
+                    `<button class="btn btn-outline" onclick="toggleUserRole('${u}', 'PRO')">
+                        <i class="fa-solid fa-arrow-down"></i> Jadikan PRO
+                    </button>` : 
+                    `<button class="btn btn-primary" style="background:var(--primary-color);" onclick="toggleUserRole('${u}', 'VIP')">
+                        <i class="fa-solid fa-crown"></i> Jadikan VIP
+                    </button>`}
+
                     <button class="btn btn-secondary" onclick="openChangePassword('${u}')">
                         <i class="fa-solid fa-key"></i> Ganti Password
                     </button>
