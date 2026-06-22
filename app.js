@@ -195,6 +195,8 @@ window.toggleUserRole = async function(username, role) {
 })();
 
 function toggleAuth(type) {
+    document.getElementById('form-login')?.reset();
+    document.getElementById('form-register')?.reset();
     if (type === 'register') {
         document.getElementById('login-card').style.display = 'none';
         document.getElementById('register-card').style.display = 'block';
