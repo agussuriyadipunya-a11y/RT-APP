@@ -227,6 +227,7 @@ document.getElementById('form-register')?.addEventListener('submit', async funct
         confirmButtonText: 'OK',
         confirmButtonColor: '#4f46e5'
     });
+    this.reset();
     toggleAuth('login');
 });
 
