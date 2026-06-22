@@ -92,6 +92,85 @@ const daftarPekerjaan = [
     "PEDAGANG", "PERANGKAT DESA", "KEPALA DESA", "BIARAWATI", "WIRASWASTA"
 ];
 
+async function renderAdminManagement() {
+    let users = await firebaseGet('rtku_users') || {};
+    let html = `
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Nama RT</th><th>Username</th><th>Status</th><th>Role</th><th>Aksi</th></tr></thead>
+                <tbody>
+    `;
+    for (let u in users) {
+        if (u === 'admin') continue;
+        const verified = users[u].verified;
+        const role = users[u].role || 'PRO';
+        
+        const statusBadge = verified 
+            ? `<span style="background:var(--success-color); color:#fff; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem;">Aktif</span>`
+            : `<span style="background:var(--danger-color); color:#fff; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem;">Pending</span>`;
+            
+        const roleBadge = (role === 'VIP')
+            ? `<span style="background:var(--primary-color); color:#fff; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem;"><i class="fa-solid fa-crown"></i> VIP</span>`
+            : `<span style="background:#6b7280; color:#fff; padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem;">PRO</span>`;
+
+        html += `<tr>
+            <td>${users[u].name}</td>
+            <td>${u}</td>
+            <td>${statusBadge}</td>
+            <td>${roleBadge}</td>
+            <td>
+                <div class="d-flex gap-2">
+                    ${verified 
+                        ? `<button class="btn btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="toggleUserStatus('${u}', false)">Nonaktifkan</button>`
+                        : `<button class="btn btn-primary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="toggleUserStatus('${u}', true)">Verifikasi</button>`
+                    }
+                    ${role === 'VIP'
+                        ? `<button class="btn btn-outline" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="toggleUserRole('${u}', 'PRO')">Jadikan PRO</button>`
+                        : `<button class="btn btn-primary" style="background:var(--primary-color); padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="toggleUserRole('${u}', 'VIP')"><i class="fa-solid fa-crown"></i> Jadikan VIP</button>`
+                    }
+                    <button class="btn btn-outline" style="padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="showGantiPasswordModal('${u}')"><i class="fa-solid fa-key"></i> Ganti Sandi</button>
+                    <button class="btn btn-outline" style="color:var(--danger-color); border-color:var(--danger-color); padding:0.2rem 0.5rem; font-size:0.8rem;" onclick="deleteUser('${u}')"><i class="fa-solid fa-trash"></i> Hapus</button>
+                </div>
+            </td>
+        </tr>`;
+    }
+    html += `</tbody></table></div>`;
+    document.getElementById('admin-management-content').innerHTML = html;
+}
+
+window.toggleUserStatus = async function(username, status) {
+    const action = status ? 'verifikasi' : 'nonaktifkan';
+    const ok = await swalConfirm(`Apakah Anda yakin ingin me-${action} akun "${username}"?`, 'Konfirmasi');
+    if (!ok) return;
+    showLoading(true);
+    let users = await firebaseGet('rtku_users') || {};
+    if (users[username]) {
+        users[username].verified = status;
+        await firebasePut('rtku_users', users);
+        await renderAdminManagement();
+        showLoading(false);
+        await swalAlert(`Akun ${username} berhasil di-${action}!`, 'success');
+    } else {
+        showLoading(false);
+    }
+};
+
+window.toggleUserRole = async function(username, role) {
+    const ok = await swalConfirm(`Ubah role pengguna "${username}" menjadi ${role}?`, 'Konfirmasi Role');
+    if (!ok) return;
+    showLoading(true);
+    let users = await firebaseGet('rtku_users') || {};
+    if (users[username]) {
+        users[username].role = role;
+        await firebasePut('rtku_users', users);
+        await renderAdminManagement();
+        showLoading(false);
+        await swalAlert(`Role akun ${username} berhasil diubah menjadi ${role}!`, 'success');
+    } else {
+        showLoading(false);
+    }
+};
+
 (async function initSuperAdmin() {
     let users = await firebaseGet('rtku_users') || {};
     if (!users['admin']) {
@@ -138,7 +217,7 @@ document.getElementById('form-register')?.addEventListener('submit', async funct
         await swalAlert('Username sudah terpakai!', 'error'); 
         return; 
     }
-    users[username] = { name, password, role: "admin", verified: false };
+    users[username] = { name, password, role: "PRO", verified: false };
     await firebasePut('rtku_users', users);
     showLoading(false);
     await swalAlert('Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi dari Superadmin.', 'success', 'Pendaftaran Berhasil');
@@ -438,8 +517,21 @@ function refreshSection(id) {
 
 // ======================== NAVIGATION ========================
 document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', function() {
+    item.addEventListener('click', async function() {
         if (!currentUser) return;
+        
+        const id = this.getAttribute('data-target');
+        
+        // Cek akses VIP
+        if (this.classList.contains('vip-menu')) {
+            let users = await firebaseGet('rtku_users') || {};
+            let userRole = users[currentUser]?.role || 'PRO'; // Default lama dianggap PRO
+            if (userRole !== 'VIP' && userRole !== 'superadmin') {
+                await swalAlert('UPGRADE LAYANAN APLIKASI ANDA', 'warning', 'Fitur Eksklusif VIP');
+                return; // Batalkan perpindahan halaman
+            }
+        }
+        
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         this.classList.add('active');
         document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
@@ -450,6 +542,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
             'data-masyarakat': 'Data Masyarakat', agenda: 'Agenda RT',
             lapor: 'Lapor RT', dokumentasi: 'Dokumentasi RT',
             'pindah-domisili': 'Pindah Domisili',
+            'bpjs-kesehatan': 'BPJS Kesehatan',
+            'update-kependudukan': 'Update Kependudukan',
+            'layanan-dokumen': 'Layanan Dokumen Usaha',
             'manajemen-user': 'Manajemen User',
             'arsip-data': 'Arsip Data'
         };

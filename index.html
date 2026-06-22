@@ -83,6 +83,12 @@
                 <div class="nav-item" data-target="agenda"><i class="fa-solid fa-calendar-days"></i> Agenda RT</div>
                 <div class="nav-item" data-target="lapor"><i class="fa-solid fa-bullhorn"></i> Lapor RT</div>
                 <div class="nav-item" data-target="dokumentasi"><i class="fa-solid fa-images"></i> Dokumentasi RT</div>
+                
+                <!-- Menu Eksklusif VIP -->
+                <div class="nav-item vip-menu" data-target="bpjs-kesehatan"><i class="fa-solid fa-heart-pulse"></i> BPJS Kesehatan</div>
+                <div class="nav-item vip-menu" data-target="update-kependudukan"><i class="fa-solid fa-address-card"></i> Update Kependudukan</div>
+                <div class="nav-item vip-menu" data-target="layanan-dokumen"><i class="fa-solid fa-file-signature"></i> Layanan Dokumen Usaha</div>
+                
                 <!-- Pindah Domisili: tampil untuk RT biasa dan superadmin -->
                 <div class="nav-item" id="nav-pindah" data-target="pindah-domisili" style="display:none;">
                     <i class="fa-solid fa-truck-moving"></i> Pindah Domisili
@@ -320,6 +326,43 @@
                                 </thead>
                                 <tbody id="tbody-pindah"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= VIP SECTIONS ================= -->
+                <!-- BPJS Kesehatan -->
+                <section id="bpjs-kesehatan" class="page-section">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">BPJS Kesehatan (Fitur VIP)</h2></div>
+                        <div style="text-align:center; padding: 3rem 1rem;">
+                            <i class="fa-solid fa-heart-pulse" style="font-size:3rem; color:var(--primary-color); margin-bottom:1rem;"></i>
+                            <h3 style="font-size:1.5rem; color:var(--text-primary); margin-bottom:0.5rem;">Layanan BPJS Terintegrasi</h3>
+                            <p style="color:var(--text-secondary);">Fitur ini sedang dalam pengembangan.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Update Kependudukan -->
+                <section id="update-kependudukan" class="page-section">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Update Kependudukan (Fitur VIP)</h2></div>
+                        <div style="text-align:center; padding: 3rem 1rem;">
+                            <i class="fa-solid fa-address-card" style="font-size:3rem; color:var(--primary-color); margin-bottom:1rem;"></i>
+                            <h3 style="font-size:1.5rem; color:var(--text-primary); margin-bottom:0.5rem;">Sinkronisasi Data Dukcapil</h3>
+                            <p style="color:var(--text-secondary);">Fitur ini sedang dalam pengembangan.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Layanan Dokumen Usaha -->
+                <section id="layanan-dokumen" class="page-section">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Layanan Dokumen Usaha (Fitur VIP)</h2></div>
+                        <div style="text-align:center; padding: 3rem 1rem;">
+                            <i class="fa-solid fa-file-signature" style="font-size:3rem; color:var(--primary-color); margin-bottom:1rem;"></i>
+                            <h3 style="font-size:1.5rem; color:var(--text-primary); margin-bottom:0.5rem;">Pengajuan Surat Izin Usaha</h3>
+                            <p style="color:var(--text-secondary);">Fitur ini sedang dalam pengembangan.</p>
                         </div>
                     </div>
                 </section>
