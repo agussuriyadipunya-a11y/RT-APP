@@ -609,7 +609,7 @@ async function renderBpjs() {
                 <button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;margin-top:0.3rem;" onclick="hapusBpjs('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i></button>
             `;
         } else {
-            aksiHtml = `<button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="hapusBpjs('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i> Hapus</button>`;
+            aksiHtml = '<span style="font-size:0.75rem; color:var(--text-secondary);"><i class="fa-solid fa-eye"></i> Lihat Saja</span>';
         }
 
         const rtLabel = currentUser === 'admin' ? `<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.2rem;"><span class="badge badge-success">${item._rtName || item._rtUser}</span></div>` : '';
