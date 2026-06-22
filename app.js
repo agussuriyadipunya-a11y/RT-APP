@@ -568,7 +568,7 @@ async function hapusKK(noKK) {
     await firebasePut(`${rtTarget}_rtku_kk`, kks);
     await loadData(); updateDashboardStats(); renderKKList();
     showLoading(false);
-    await swalAlert(`KK ${noKK} berhasil diarsipkan. Data dapat dilihat di menu Arsip Data.`, 'success', 'Berhasil Diarsipkan');
+    await swalAlert(`KK ${noKK} berhasil dihapus dari daftar.`, 'success', 'Berhasil Dihapus');
 }
 
 // ======================== DETAIL KK & ANGGOTA ========================
@@ -695,7 +695,7 @@ async function hapusAnggota(noKK, nik) {
     if (updatedKK) renderAnggotaList(updatedKK);
     updateDashboardStats();
     showLoading(false);
-    await swalAlert(`Anggota "${anggota.nama}" berhasil diarsipkan. Data dapat dilihat di menu Arsip Data.`, 'success', 'Berhasil Diarsipkan');
+    await swalAlert(`Anggota "${anggota.nama}" berhasil dihapus dari daftar.`, 'success', 'Berhasil Dihapus');
 }
 
 async function simpanKeArsip(rtUser, jenis, data) {
