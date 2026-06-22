@@ -106,11 +106,13 @@ body {
 #app-container {
     display: none; /* Hidden until logged in */
     width: 100%;
+    height: 100vh;
 }
 
 /* Sidebar */
 .sidebar {
     width: 280px;
+    height: 100vh;
     background-color: var(--sidebar-bg);
     color: var(--sidebar-text);
     display: flex;
@@ -118,7 +120,7 @@ body {
     transition: transform var(--transition-normal);
     z-index: 50;
     box-shadow: var(--shadow-lg);
-    overflow: hidden; /* Penting: biarkan anak yang scroll */
+    overflow: hidden;
 }
 
 .sidebar-header {
