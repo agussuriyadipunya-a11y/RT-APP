@@ -548,7 +548,6 @@ document.querySelectorAll('.nav-item').forEach(item => {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         this.classList.add('active');
         document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-        const id = this.getAttribute('data-target');
         document.getElementById(id).classList.add('active');
         const titles = {
             dashboard: 'Dashboard', surat: 'Surat Menyurat',
