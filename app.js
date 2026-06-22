@@ -162,6 +162,13 @@ document.getElementById('form-login')?.addEventListener('submit', async function
         currentName = users[username].name;
         activeRT    = (username === 'admin') ? 'all' : username;
         
+        if (username !== 'admin') {
+            const deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            users[username].deviceId = deviceId;
+            await firebasePut('rtku_users', users);
+            localStorage.setItem('session_device_id', deviceId);
+        }
+
         localStorage.setItem('session_user', JSON.stringify({ username: currentUser, name: currentName, activeRT: activeRT }));
         
         document.getElementById('auth-container').style.opacity = '0';
@@ -193,6 +200,7 @@ async function logout() {
 
     currentUser = null; currentName = ""; activeRT = null;
     localStorage.removeItem('session_user');
+    localStorage.removeItem('session_device_id');
     document.getElementById('app-container').style.display = 'none';
     const auth = document.getElementById('auth-container');
     auth.style.display = 'flex';
@@ -1204,7 +1212,16 @@ document.getElementById('form-ganti-password')?.addEventListener('submit', async
 
 async function removeDevice(username) {
     const ok5 = await swalConfirm(`Paksa logout perangkat untuk user '${username}'?`, 'Paksa Logout', 'question');
-    if (ok5) await swalAlert(`Perangkat untuk user ${username} telah dihapus. Mereka harus login ulang.`, 'info');
+    if (ok5) {
+        showLoading(true);
+        let users = await firebaseGet('rtku_users') || {};
+        if (users[username]) {
+            users[username].deviceId = null;
+            await firebasePut('rtku_users', users);
+        }
+        showLoading(false);
+        await swalAlert(`Perangkat untuk user ${username} telah dihapus. Mereka harus login ulang.`, 'info');
+    }
 }
 
 // ======================== ARSIP DATA (superadmin only) ========================
@@ -1345,9 +1362,22 @@ async function hapusPermanenArsipAnggota(index) {
 // Auto-login jika session_user ada
 (async function checkSession() {
     const saved = localStorage.getItem('session_user');
+    const savedDeviceId = localStorage.getItem('session_device_id');
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
+            
+            if (parsed.username !== 'admin') {
+                const users = await firebaseGet('rtku_users') || {};
+                const userData = users[parsed.username];
+                if (!userData || userData.deviceId !== savedDeviceId) {
+                    localStorage.removeItem('session_user');
+                    localStorage.removeItem('session_device_id');
+                    await swalAlert('Sesi berakhir. Akun ini telah masuk dari perangkat lain atau akses perangkat telah dicabut oleh Super Admin.', 'warning', 'Sesi Berakhir');
+                    return;
+                }
+            }
+            
             currentUser = parsed.username;
             currentName = parsed.name;
             activeRT = parsed.activeRT;
