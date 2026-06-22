@@ -177,7 +177,20 @@ document.getElementById('form-login')?.addEventListener('submit', async function
     }
 });
 
-function logout() {
+async function logout() {
+    const confirmed = await Swal.fire({
+        icon: 'question',
+        title: 'Keluar dari Aplikasi?',
+        text: 'Anda akan keluar dari sesi ini.',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-right-from-bracket"></i> Keluar',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
+    });
+    if (!confirmed.isConfirmed) return;
+
     currentUser = null; currentName = ""; activeRT = null;
     localStorage.removeItem('session_user');
     document.getElementById('app-container').style.display = 'none';
