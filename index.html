@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RT-KU - Aplikasi Pengelolaan Warga</title>
+    <meta name="description" content="Aplikasi pengelolaan warga RT yang modern dan responsif">
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Global Loading Overlay -->
+    <div id="global-loader" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,255,255,0.8); z-index:9999; justify-content:center; align-items:center; flex-direction:column; backdrop-filter:blur(4px);">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:3rem; color:var(--primary-color); margin-bottom:1rem;"></i>
+        <h3 style="color:var(--text-primary);">Memuat data dari Server...</h3>
+    </div>
+
+    <!-- Authentication Container -->
+    <div id="auth-container">
+        <div class="auth-card" id="login-card">
+            <div class="auth-logo" style="height: 150px; width: 150px; margin: 0 auto 1rem auto; overflow: hidden; border-radius: 24px; box-shadow: var(--shadow-md); background: #fff;"><img src="logo.png" alt="RT-KU Logo" style="height: 100%; width: 100%; object-fit: contain;"></div>
+            <h2 class="auth-title">Masuk ke RT-KU</h2>
+            <p class="auth-subtitle">Sistem Informasi Pengelolaan Warga</p>
+            <form id="form-login">
+                <div class="form-group">
+                    <label class="form-label">Username (ID Admin RT)</label>
+                    <input type="text" id="login-username" class="form-control" required placeholder="Contoh: admin_rt01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="login-password" class="form-control" required placeholder="Masukkan password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block mt-4">Masuk Sekarang</button>
+            </form>
+            <div class="auth-toggle">Belum punya akun RT? <a onclick="toggleAuth('register')">Daftar Admin RT Baru</a></div>
+        </div>
+
+        <div class="auth-card" id="register-card" style="display: none;">
+            <div class="auth-logo" style="height: 150px; width: 150px; margin: 0 auto 1rem auto; overflow: hidden; border-radius: 24px; box-shadow: var(--shadow-md); background: #fff;"><img src="logo.png" alt="RT-KU Logo" style="height: 100%; width: 100%; object-fit: contain;"></div>
+            <h2 class="auth-title">Daftar Admin RT</h2>
+            <p class="auth-subtitle">Buat ruang terisolasi untuk RT Anda</p>
+            <form id="form-register">
+                <div class="form-group">
+                    <label class="form-label">Nama Ketua RT</label>
+                    <input type="text" id="reg-name" class="form-control" required placeholder="Nama Lengkap">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Username (Tanpa Spasi)</label>
+                    <input type="text" id="reg-username" class="form-control" required placeholder="Contoh: admin_rt01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="reg-password" class="form-control" required placeholder="Buat password">
+                </div>
+                <button type="submit" class="btn btn-secondary btn-block mt-4">Daftar Sekarang</button>
+            </form>
+            <div class="auth-toggle">Sudah punya akun? <a onclick="toggleAuth('login')">Masuk di sini</a></div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header" style="justify-content: center; padding: 1.5rem 1rem;">
+                <div style="width: 100%; max-width: 180px; display: flex; align-items: center; justify-content: center;">
+                    <img src="logo.png" alt="RT-KU Logo" style="width: 150px; height: auto; object-fit: contain; border-radius: 20px; box-shadow: var(--shadow-md); background: #fff;">
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-item" data-target="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
+                <div class="nav-item" data-target="surat"><i class="fa-solid fa-envelope-open-text"></i> Surat Menyurat</div>
+                <div class="nav-item" data-target="data-masyarakat"><i class="fa-solid fa-users"></i> Data Masyarakat</div>
+                <div class="nav-item" data-target="agenda"><i class="fa-solid fa-calendar-days"></i> Agenda RT</div>
+                <div class="nav-item" data-target="lapor"><i class="fa-solid fa-bullhorn"></i> Lapor RT</div>
+                <div class="nav-item" data-target="dokumentasi"><i class="fa-solid fa-images"></i> Dokumentasi RT</div>
+                <!-- Pindah Domisili: tampil untuk RT biasa dan superadmin -->
+                <div class="nav-item" id="nav-pindah" data-target="pindah-domisili" style="display:none;">
+                    <i class="fa-solid fa-truck-moving"></i> Pindah Domisili
+                </div>
+                <div class="nav-item" id="nav-manajemen-user" data-target="manajemen-user" style="display:none; color:var(--danger-color);">
+                    <i class="fa-solid fa-user-gear"></i> Manajemen User
+                </div>
+                <div class="nav-item" id="nav-arsip" data-target="arsip-data" style="display:none; color:#f59e0b;">
+                    <i class="fa-solid fa-box-archive"></i> Arsip Data
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-title" id="topbar-title">Dashboard</div>
+                <div class="user-profile">
+                    <select id="admin-rt-selector" class="form-control" style="display:none; margin-right:1rem; width:auto;" onchange="changeAdminView(this.value)">
+                        <option value="all">Semua Data (Global)</option>
+                    </select>
+                    <div class="avatar" id="topbar-avatar">RT</div>
+                    <span style="font-weight:500;" id="topbar-name">Ketua RT</span>
+                    <button class="btn btn-outline" style="margin-left:1rem; padding:0.4rem 0.8rem;" onclick="logout()">
+                        <i class="fa-solid fa-right-from-bracket"></i> Keluar
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area">
+
+                <!-- Dashboard -->
+                <section id="dashboard" class="page-section active">
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <div class="card-header"><h2 class="card-title">Selamat Datang di RT-KU</h2></div>
+                        <p class="mb-4">Ruang kerja untuk <strong id="dash-username"></strong>.</p>
+                        <div class="d-flex gap-4" style="flex-wrap: wrap;">
+                            <div class="card" style="flex:1; min-width: 150px; border-left:4px solid var(--primary-color);">
+                                <h3>Total KK</h3>
+                                <p style="font-size:2rem; font-weight:700; color:var(--primary-color);" id="stat-kk">0</p>
+                            </div>
+                            <div class="card" style="flex:1; min-width: 150px; border-left:4px solid var(--secondary-color);">
+                                <h3>Jumlah Anggota</h3>
+                                <p style="font-size:2rem; font-weight:700; color:var(--secondary-color);" id="stat-warga">0</p>
+                            </div>
+                            <div class="card" style="flex:1; min-width: 150px; border-left:4px solid #3b82f6;">
+                                <h3>Laki-Laki</h3>
+                                <p style="font-size:2rem; font-weight:700; color:#3b82f6;" id="stat-lk">0</p>
+                            </div>
+                            <div class="card" style="flex:1; min-width: 150px; border-left:4px solid #ec4899;">
+                                <h3>Perempuan</h3>
+                                <p style="font-size:2rem; font-weight:700; color:#ec4899;" id="stat-pr">0</p>
+                            </div>
+                            <div class="card" style="flex:1; min-width: 150px; border-left:4px solid #f59e0b;" id="stat-pindah-card">
+                                <h3>Pindah Domisili</h3>
+                                <p style="font-size:2rem; font-weight:700; color:#f59e0b;" id="stat-pindah">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-4" style="flex-wrap: wrap;">
+                        <div class="card" style="flex: 1; min-width: 250px;">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fa-solid fa-sitemap" style="color:var(--primary-color);"></i> Struktur Kepengurusan RT</h3>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem;">
+                                <div><strong>Ketua RT:</strong> <span id="info-ketua-rt">-</span></div>
+                                <div><strong>Sekretaris:</strong> <span id="info-sekretaris">-</span></div>
+                                <div><strong>Bendahara:</strong> <span id="info-bendahara">-</span></div>
+                            </div>
+                        </div>
+                        <div class="card" style="flex: 1; min-width: 250px;">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fa-solid fa-map-location-dot" style="color:var(--secondary-color);"></i> Alamat Sekretariat</h3>
+                            </div>
+                            <div style="margin-top:1rem;">
+                                <p id="info-alamat-rt">Belum diatur</p>
+                            </div>
+                        </div>
+                        <div class="card" style="flex: 1; min-width: 250px;">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fa-solid fa-phone-volume" style="color:#ef4444;"></i> Kontak Darurat</h3>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem;">
+                                <div><strong>Ambulans / RS:</strong> <span id="info-kontak-rs">-</span></div>
+                                <div><strong>Pemadam Kebakaran:</strong> <span id="info-kontak-damkar">-</span></div>
+                                <div><strong>Kepolisian (Polsek):</strong> <span id="info-kontak-polisi">-</span></div>
+                                <div><strong>Pos Keamanan RT:</strong> <span id="info-kontak-keamanan">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Surat Menyurat -->
+                <section id="surat" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Surat Menyurat</h2>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline" onclick="showModal('modal-add-surat-masuk')"><i class="fa-solid fa-inbox"></i> Surat Masuk</button>
+                                <button class="btn btn-primary" onclick="showModal('modal-add-surat-keluar')"><i class="fa-solid fa-paper-plane"></i> Surat Keluar</button>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-4 mb-4">
+                            <button class="btn btn-primary" id="btn-tab-masuk" onclick="switchSuratTab('masuk')">Surat Masuk</button>
+                            <button class="btn btn-outline" id="btn-tab-keluar" onclick="switchSuratTab('keluar')">Surat Keluar</button>
+                        </div>
+                        <div id="view-surat-masuk">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead><tr><th>No. Reg</th><th>No. Surat</th><th>Tgl Terima</th><th>Pengirim</th><th>Perihal</th><th>Ponsel</th></tr></thead>
+                                    <tbody id="tbody-surat-masuk"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="view-surat-keluar" style="display:none;">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead><tr><th>No. Reg</th><th>No. Surat</th><th>Tgl Keluar</th><th>Tujuan</th><th>Perihal</th><th>Ponsel</th></tr></thead>
+                                    <tbody id="tbody-surat-keluar"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data Masyarakat -->
+                <section id="data-masyarakat" class="page-section">
+                    <div id="kk-list-view">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Data Kartu Keluarga (KK)</h2>
+                                <button class="btn btn-primary" onclick="showModal('modal-add-kk')"><i class="fa-solid fa-plus"></i> Tambah KK</button>
+                            </div>
+                            <div class="search-container">
+                                <input type="text" id="search-kk" class="form-control" placeholder="Cari No. KK atau Nama Kepala Keluarga...">
+                                <button class="btn btn-secondary" id="btn-search"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>No. Reg</th><th>No. KK</th><th>Kepala Keluarga</th>
+                                            <th>Ponsel</th><th>Alamat</th><th>Anggota</th><th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-kk"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detail KK View -->
+                    <div id="kk-detail-view" style="display:none;">
+                        <button class="btn btn-outline mb-4" onclick="backToKKList()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Detail KK: <span id="detail-no-kk" style="color:var(--primary-color);"></span></h2>
+                                <button class="btn btn-secondary" onclick="openAddMemberModal()"><i class="fa-solid fa-user-plus"></i> Tambah Anggota</button>
+                            </div>
+                            <div class="mb-4">
+                                <p><strong>Kepala Keluarga:</strong> <span id="detail-kepala"></span></p>
+                                <p><strong>Alamat:</strong> <span id="detail-alamat"></span></p>
+                                <p><strong>No. Ponsel KK:</strong> <span id="detail-ponsel"></span></p>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr><th>No. Reg</th><th>NIK</th><th>Nama & JK</th><th>Hubungan</th><th>Tempat, Tgl Lahir</th><th>Pekerjaan</th><th>Ponsel</th><th>Aksi</th></tr>
+                                    </thead>
+                                    <tbody id="tbody-anggota"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Agenda RT -->
+                <section id="agenda" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Agenda Kegiatan RT</h2>
+                            <button class="btn btn-primary" onclick="showModal('modal-add-agenda')"><i class="fa-solid fa-plus"></i> Tambah Agenda</button>
+                        </div>
+                        <div id="list-agenda" class="d-flex flex-column gap-4"></div>
+                    </div>
+                </section>
+
+                <!-- Lapor RT -->
+                <section id="lapor" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Laporan Masyarakat</h2>
+                            <button class="btn btn-primary" onclick="showModal('modal-add-lapor')"><i class="fa-solid fa-plus"></i> Buat Laporan</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead><tr><th>No. Reg</th><th>Tanggal</th><th>Pelapor</th><th>Ponsel</th><th>Kategori</th><th>Isi Laporan</th></tr></thead>
+                                <tbody id="tbody-lapor"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Dokumentasi RT -->
+                <section id="dokumentasi" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Galeri Dokumentasi</h2>
+                            <button class="btn btn-primary" onclick="showModal('modal-add-dokumentasi')"><i class="fa-solid fa-upload"></i> Upload Foto</button>
+                        </div>
+                        <div id="grid-dokumentasi" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:1rem;"></div>
+                    </div>
+                </section>
+
+                <!-- Pindah Domisili (RT biasa & superadmin) -->
+                <section id="pindah-domisili" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fa-solid fa-truck-moving" style="color:#f59e0b;"></i> Data Pindah Domisili</h2>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr id="thead-pindah-row">
+                                        <th>Tgl Pindah</th><th>Nama RT</th><th>Jenis</th><th>Nama / KK</th>
+                                        <th>No. KK</th><th>NIK</th><th>Alamat Baru</th><th>Alasan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-pindah"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Manajemen User (superadmin only) -->
+                <section id="manajemen-user" class="page-section">
+                    <div class="card">
+                        <div class="card-header"><h2 class="card-title">Manajemen User (Super Admin)</h2></div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead><tr><th>Username</th><th>Nama Pengguna</th><th>Aksi</th></tr></thead>
+                                <tbody id="tbody-users"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Arsip Data (superadmin only) -->
+                <section id="arsip-data" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="fa-solid fa-box-archive" style="color:#f59e0b;"></i> Arsip Data Terhapus
+                            </h2>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline" id="btn-arsip-tab-kk" onclick="switchArsipTab('kk')">
+                                    <i class="fa-solid fa-id-card"></i> Arsip KK
+                                </button>
+                                <button class="btn btn-outline" id="btn-arsip-tab-anggota" onclick="switchArsipTab('anggota')">
+                                    <i class="fa-solid fa-person"></i> Arsip Anggota
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Arsip KK -->
+                        <div id="view-arsip-kk">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tgl Hapus</th><th>Nama RT</th><th>No. Reg</th>
+                                            <th>No. KK</th><th>Kepala Keluarga</th><th>Ponsel</th>
+                                            <th>Alamat</th><th>Jml Anggota</th><th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-arsip-kk"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Arsip Anggota -->
+                        <div id="view-arsip-anggota" style="display:none;">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tgl Hapus</th><th>Nama RT</th><th>No. KK Asal</th>
+                                            <th>No. Reg</th><th>NIK</th><th>Nama</th>
+                                            <th>Hubungan</th><th>Ponsel</th><th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-arsip-anggota"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== MODALS ===================== -->
+
+    <!-- Modal Add KK -->
+    <div class="modal-overlay" id="modal-add-kk">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Kartu Keluarga Baru</h3>
+                <button class="close-btn" onclick="hideModal('modal-add-kk')">&times;</button>
+            </div>
+            <form id="form-add-kk">
+                <div class="form-group">
+                    <label class="form-label">Nomor KK</label>
+                    <input type="text" id="input-nokk" class="form-control" required placeholder="16 digit Nomor KK" pattern="\d{16}" maxlength="16" minlength="16" title="Harus 16 digit angka" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">NIK Kepala Keluarga</label>
+                    <input type="text" id="input-kk-nik" class="form-control" required placeholder="16 digit NIK" pattern="\d{16}" maxlength="16" minlength="16" title="Harus 16 digit angka" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nama Kepala Keluarga</label>
+                    <input type="text" id="input-kepala" class="form-control" required placeholder="Nama Lengkap">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nomor Ponsel (WhatsApp)</label>
+                    <input type="text" id="input-kk-ponsel" class="form-control" required placeholder="08xxxxxxxxxx" pattern="\d{10,13}" maxlength="13" minlength="10" title="Harus 10 hingga 13 digit angka" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,13)">
+                </div>
+                <div class="d-flex gap-4">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Tempat Lahir</label>
+                        <input type="text" id="input-kk-tempat-lahir" class="form-control" placeholder="Kota tempat lahir">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Tanggal Lahir</label>
+                        <input type="date" id="input-kk-tgl-lahir" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Agama</label>
+                    <select id="input-kk-agama" class="form-control">
+                        <option value="">Pilih Agama</option>
+                        <option value="Islam">Islam</option>
+                        <option value="Kristen">Kristen</option>
+                        <option value="Katolik">Katolik</option>
+                        <option value="Hindu">Hindu</option>
+                        <option value="Buddha">Buddha</option>
+                        <option value="Konghucu">Konghucu</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pekerjaan</label>
+                    <select id="input-kk-pekerjaan" class="form-control pekerjaan-select">
+                        <option value="">Pilih Pekerjaan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alamat Lengkap</label>
+                    <textarea id="input-alamat" class="form-control" required rows="2" placeholder="Jl. ..."></textarea>
+                </div>
+                <div class="d-flex gap-4">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">RT/RW</label>
+                        <input type="text" id="input-kk-rtrw" class="form-control" placeholder="001/002">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Kelurahan</label>
+                        <select id="input-kk-kelurahan" class="form-control">
+                            <option value="">Pilih Kelurahan</option>
+                            <option value="Tanjungpinang Kota">Tanjungpinang Kota</option>
+                            <option value="Kampung Bugis">Kampung Bugis</option>
+                            <option value="Senggarang">Senggarang</option>
+                            <option value="Penyengat">Penyengat</option>
+                            <option value="Tanjungpinang Barat">Tanjungpinang Barat</option>
+                            <option value="Bukit Cermin">Bukit Cermin</option>
+                            <option value="Kampung Baru">Kampung Baru</option>
+                            <option value="Kemboja">Kemboja</option>
+                            <option value="Melayu Kota Piring">Melayu Kota Piring</option>
+                            <option value="Batu IX">Batu IX</option>
+                            <option value="Kampung Bulang">Kampung Bulang</option>
+                            <option value="Air Raja">Air Raja</option>
+                            <option value="Pinang Kencana">Pinang Kencana</option>
+                            <option value="Tanjung Unggat">Tanjung Unggat</option>
+                            <option value="Sei Jang">Sei Jang</option>
+                            <option value="Dompak">Dompak</option>
+                            <option value="Tanjung Ayun Sakti">Tanjung Ayun Sakti</option>
+                            <option value="Tanjungpinang Timur">Tanjungpinang Timur</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kecamatan</label>
+                    <input type="text" id="input-kk-kecamatan" class="form-control" placeholder="Kecamatan otomatis terisi" readonly style="background:#f3f4f6;font-weight:600;">
+                </div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-kk')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan KK</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Member -->
+    <div class="modal-overlay" id="modal-add-member">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Anggota Keluarga</h3>
+                <button class="close-btn" onclick="hideModal('modal-add-member')">&times;</button>
+            </div>
+            <form id="form-add-member">
+                <input type="hidden" id="input-member-nokk">
+                <div class="form-group">
+                    <label class="form-label">NIK</label>
+                    <input type="text" id="input-nik" class="form-control" required placeholder="16 digit NIK" pattern="\d{16}" maxlength="16" minlength="16" title="Harus 16 digit angka" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nama Lengkap</label>
+                    <input type="text" id="input-nama" class="form-control" required>
+                </div>
+                <div class="d-flex gap-4">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Tempat Lahir</label>
+                        <input type="text" id="input-tempat-lahir" class="form-control" placeholder="Kota">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Tanggal Lahir</label>
+                        <input type="date" id="input-tgl-lahir" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nomor Ponsel</label>
+                    <input type="text" id="input-member-ponsel" class="form-control" required placeholder="08xxxxxxxxxx" pattern="\d{10,13}" maxlength="13" minlength="10" title="Harus 10 hingga 13 digit angka" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,13)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Jenis Kelamin</label>
+                    <select id="input-jk" class="form-control" required>
+                        <option value="">Pilih</option>
+                        <option value="Laki-laki">Laki-laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Hubungan Keluarga</label>
+                    <select id="input-hubungan" class="form-control" required>
+                        <option value="">Pilih</option>
+                        <option value="Kepala Keluarga">Kepala Keluarga</option>
+                        <option value="Istri">Istri</option>
+                        <option value="Anak">Anak</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pekerjaan</label>
+                    <select id="input-pekerjaan" class="form-control pekerjaan-select">
+                        <option value="">Pilih Pekerjaan</option>
+                    </select>
+                </div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-member')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Anggota</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edit Anggota -->
+    <div class="modal-overlay" id="modal-edit-member">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-user-pen" style="color:var(--primary-color);"></i> Edit Data Anggota</h3>
+                <button class="close-btn" onclick="hideModal('modal-edit-member')">&times;</button>
+            </div>
+            <form id="form-edit-member">
+                <input type="hidden" id="edit-member-nokk">
+                <input type="hidden" id="edit-member-nik-original">
+
+                <!-- Info NIK (readonly) -->
+                <div class="form-group">
+                    <label class="form-label">NIK <span style="color:var(--text-secondary);font-weight:400;">(tidak dapat diubah)</span></label>
+                    <input type="text" id="edit-member-nik-display" class="form-control" readonly
+                           style="background:#f3f4f6;font-family:monospace;font-weight:700;color:var(--primary-color);">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nama Lengkap</label>
+                    <input type="text" id="edit-member-nama" class="form-control" required placeholder="Nama Lengkap">
+                </div>
+                <div class="d-flex gap-4">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Tempat Lahir</label>
+                        <input type="text" id="edit-member-tempat-lahir" class="form-control" placeholder="Kota">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Tanggal Lahir</label>
+                        <input type="date" id="edit-member-tgl-lahir" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nomor Ponsel</label>
+                    <input type="text" id="edit-member-ponsel" class="form-control" required placeholder="08xxxxxxxxxx" pattern="\d{10,13}" maxlength="13" minlength="10" title="Harus 10 hingga 13 digit angka" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,13)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Jenis Kelamin</label>
+                    <select id="edit-member-jk" class="form-control" required>
+                        <option value="">Pilih</option>
+                        <option value="Laki-laki">Laki-laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Hubungan Keluarga</label>
+                    <select id="edit-member-hubungan" class="form-control" required>
+                        <option value="">Pilih</option>
+                        <option value="Kepala Keluarga">Kepala Keluarga</option>
+                        <option value="Istri">Istri</option>
+                        <option value="Anak">Anak</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pekerjaan</label>
+                    <select id="edit-member-pekerjaan" class="form-control pekerjaan-select">
+                        <option value="">Pilih Pekerjaan</option>
+                    </select>
+                </div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-edit-member')">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Pindah Domisili -->
+    <div class="modal-overlay" id="modal-pindah">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-truck-moving" style="color:#f59e0b;"></i> Catat Pindah Domisili</h3>
+                <button class="close-btn" onclick="hideModal('modal-pindah')">&times;</button>
+            </div>
+            <form id="form-pindah">
+                <input type="hidden" id="input-pindah-nokk">
+                <input type="hidden" id="input-pindah-nik">
+                <input type="hidden" id="input-pindah-jenis"> <!-- 'kk' atau 'anggota' -->
+
+                <div class="form-group">
+                    <label class="form-label">Data yang Dipindahkan</label>
+                    <input type="text" id="input-pindah-nama-display" class="form-control" readonly style="background:#f3f4f6; font-weight:600;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tanggal Pindah</label>
+                    <input type="date" id="input-pindah-tgl" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alamat Tujuan / Domisili Baru</label>
+                    <textarea id="input-pindah-alamat-baru" class="form-control" required rows="3" placeholder="Masukkan alamat lengkap tujuan pindah..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alasan Pindah</label>
+                    <select id="input-pindah-alasan" class="form-control" required>
+                        <option value="">Pilih Alasan</option>
+                        <option value="Pekerjaan">Pekerjaan</option>
+                        <option value="Menikah">Menikah</option>
+                        <option value="Mengikuti Keluarga">Mengikuti Keluarga</option>
+                        <option value="Membeli Rumah Baru">Membeli Rumah Baru</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Keterangan Tambahan (opsional)</label>
+                    <textarea id="input-pindah-keterangan" class="form-control" rows="2" placeholder="Keterangan lain..."></textarea>
+                </div>
+                <div style="background:#fef3c7; padding:0.75rem; border-radius:var(--radius-md); border:1px solid #fcd34d; margin-bottom:1rem; font-size:0.85rem; color:#92400e;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <strong>Perhatian:</strong> Data warga akan dipindah ke menu <em>Pindah Domisili</em> dan dihapus dari Data Masyarakat.
+                </div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-pindah')">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="background:#f59e0b; border:none;">
+                        <i class="fa-solid fa-truck-moving"></i> Proses Pindah
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Surat Masuk -->
+    <div class="modal-overlay" id="modal-add-surat-masuk">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Catat Surat Masuk</h3>
+                <button class="close-btn" onclick="hideModal('modal-add-surat-masuk')">&times;</button>
+            </div>
+            <form id="form-add-surat-masuk">
+                <div class="form-group"><label class="form-label">Nomor Surat</label><input type="text" id="input-sm-no" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Tanggal Terima</label><input type="date" id="input-sm-tgl" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Pengirim</label><input type="text" id="input-sm-pengirim" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">No. Ponsel Pengirim</label><input type="text" id="input-sm-ponsel" class="form-control" required placeholder="08xxxxxxxxxx"></div>
+                <div class="form-group"><label class="form-label">Perihal</label><input type="text" id="input-sm-perihal" class="form-control" required></div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-surat-masuk')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Surat Keluar -->
+    <div class="modal-overlay" id="modal-add-surat-keluar">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Buat Surat Keluar</h3>
+                <button class="close-btn" onclick="hideModal('modal-add-surat-keluar')">&times;</button>
+            </div>
+            <form id="form-add-surat-keluar">
+                <div class="form-group"><label class="form-label">Nomor Surat</label><input type="text" id="input-sk-no" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Tanggal Keluar</label><input type="date" id="input-sk-tgl" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Tujuan</label><input type="text" id="input-sk-tujuan" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">No. Ponsel PIC</label><input type="text" id="input-sk-ponsel" class="form-control" required placeholder="08xxxxxxxxxx"></div>
+                <div class="form-group"><label class="form-label">Perihal</label><input type="text" id="input-sk-perihal" class="form-control" required></div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-surat-keluar')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Agenda -->
+    <div class="modal-overlay" id="modal-add-agenda">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Agenda RT</h3>
+                <button class="close-btn" onclick="hideModal('modal-add-agenda')">&times;</button>
+            </div>
+            <form id="form-add-agenda">
+                <div class="form-group"><label class="form-label">Nama Kegiatan</label><input type="text" id="input-agenda-nama" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Tanggal</label><input type="date" id="input-agenda-tgl" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Tempat</label><input type="text" id="input-agenda-tempat" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">No. Ponsel Penanggung Jawab</label><input type="text" id="input-agenda-ponsel" class="form-control" required placeholder="08xxxxxxxxxx"></div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-agenda')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Lapor -->
+    <div class="modal-overlay" id="modal-add-lapor">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Buat Laporan Warga</h3>
+                <button class="close-btn" onclick="hideModal('modal-add-lapor')">&times;</button>
+            </div>
+            <form id="form-add-lapor">
+                <div class="form-group"><label class="form-label">Nama Pelapor</label><input type="text" id="input-lapor-nama" class="form-control" required></div>
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <select id="input-lapor-kategori" class="form-control" required>
+                        <option value="">Pilih</option>
+                        <option value="Keamanan">Keamanan</option>
+                        <option value="Infrastruktur">Infrastruktur</option>
+                        <option value="Kebersihan">Kebersihan</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="form-group"><label class="form-label">Isi Laporan</label><textarea id="input-lapor-isi" class="form-control" required rows="3"></textarea></div>
+                <div class="form-group"><label class="form-label">No. Ponsel Pelapor</label><input type="text" id="input-lapor-ponsel" class="form-control" required placeholder="08xxxxxxxxxx"></div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-lapor')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Kirim Laporan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Dokumentasi -->
+    <div class="modal-overlay" id="modal-add-dokumentasi">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Upload Dokumentasi</h3>
+                <button class="close-btn" onclick="hideModal('modal-add-dokumentasi')">&times;</button>
+            </div>
+            <form id="form-add-dokumentasi">
+                <div class="form-group"><label class="form-label">Nama Kegiatan</label><input type="text" id="input-dok-kegiatan" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">URL Foto</label><input type="url" id="input-dok-url" class="form-control" placeholder="https://..." required></div>
+                <div class="form-group"><label class="form-label">No. Ponsel Uploader</label><input type="text" id="input-dok-ponsel" class="form-control" required placeholder="08xxxxxxxxxx"></div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-dokumentasi')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ganti Password -->
+    <div class="modal-overlay" id="modal-ganti-password">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Ganti Kata Sandi</h3>
+                <button class="close-btn" onclick="hideModal('modal-ganti-password')">&times;</button>
+            </div>
+            <form id="form-ganti-password">
+                <input type="hidden" id="input-ganti-username">
+                <div class="form-group">
+                    <label class="form-label">Password Baru untuk <span id="lbl-ganti-username" style="font-weight:700;"></span></label>
+                    <input type="password" id="input-ganti-pwd" class="form-control" required placeholder="Masukkan password baru">
+                </div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-ganti-password')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
