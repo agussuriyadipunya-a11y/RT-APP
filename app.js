@@ -518,8 +518,10 @@ function refreshSection(id) {
     else if (id === 'lapor')      { renderLapor(); }
     else if (id === 'dokumentasi'){ renderDokumentasi(); }
     else if (id === 'pindah-domisili') { renderPindah(); }
+    else if (id === 'pindah-domisili') { renderPindah(); }
     else if (id === 'bpjs-kesehatan')  { renderBpjs(); }
     else if (id === 'update-kependudukan') { renderKependudukan(); }
+    else if (id === 'layanan-dokumen') { renderDokumen(); }
     else if (id === 'manajemen-user')  { renderUserManagement(); }
     else if (id === 'kepengurusan-rt') { renderEditKepengurusan(); }
     else if (id === 'tentang-aplikasi-admin') { renderEditTentang(); }
@@ -815,6 +817,160 @@ window.hapusKependudukan = async function(rtUser, index) {
     arr.splice(index, 1);
     await firebasePut(kepKey, arr);
     await renderKependudukan();
+    showLoading(false);
+    await swalAlert('Data pengajuan berhasil dihapus.', 'success');
+};
+
+// ======================== LAYANAN DOKUMEN USAHA (VIP) ========================
+document.getElementById('form-dokumen')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    showLoading(true);
+    const rtTarget = (currentUser === 'admin') ? activeRT : currentUser;
+    const dokKey = `${rtTarget}_rtku_layanan_dokumen`;
+    let arr = await firebaseGet(dokKey) || [];
+
+    const dataBaru = {
+        id: 'DOK-' + new Date().getTime(),
+        tanggal: new Date().toLocaleDateString('id-ID'),
+        jenis: document.getElementById('dokumen-jenis').value,
+        nama: document.getElementById('dokumen-nama').value,
+        nik: document.getElementById('dokumen-nik').value,
+        tempatLahir: document.getElementById('dokumen-tempat-lahir').value,
+        tglLahir: document.getElementById('dokumen-tgl-lahir').value,
+        ponsel: document.getElementById('dokumen-ponsel').value,
+        alamat: document.getElementById('dokumen-alamat').value,
+        namaUsaha: document.getElementById('dokumen-nama-usaha').value,
+        jenisUsaha: document.getElementById('dokumen-jenis-usaha').value,
+        lokasiUsaha: document.getElementById('dokumen-lokasi-usaha').value,
+        modal: document.getElementById('dokumen-modal').value,
+        penghasilan: document.getElementById('dokumen-penghasilan').value,
+        lamaUsaha: document.getElementById('dokumen-lama-usaha').value,
+        status: 'WAITING'
+    };
+
+    arr.push(dataBaru);
+    await firebasePut(dokKey, arr);
+
+    this.reset();
+    document.getElementById('dokumen-form-area').style.display = 'none';
+    await renderDokumen();
+    showLoading(false);
+    await swalAlert('Pengajuan Layanan Dokumen Usaha berhasil dikirim!', 'success', 'Terkirim');
+});
+
+async function renderDokumen() {
+    const tbody = document.getElementById('tbody-dokumen');
+    if (!tbody) return;
+
+    let allData = [];
+
+    const btnAjukan = document.getElementById('btn-ajukan-dokumen');
+    if (btnAjukan) {
+        btnAjukan.style.display = (currentUser === 'admin') ? 'none' : 'block';
+    }
+
+    if (currentUser === 'admin') {
+        let users = await firebaseGet('rtku_users') || {};
+        for (const u of Object.keys(users)) {
+            if (u === 'admin') continue;
+            const arr = await firebaseGet(`${u}_rtku_layanan_dokumen`) || [];
+            arr.forEach((item, idx) => {
+                allData.push({ ...item, _rtUser: u, _rtName: users[u]?.name || u, _idx: idx });
+            });
+        }
+    } else {
+        const arr = await firebaseGet(`${currentUser}_rtku_layanan_dokumen`) || [];
+        arr.forEach((item, idx) => {
+            allData.push({ ...item, _rtUser: currentUser, _rtName: '', _idx: idx });
+        });
+    }
+
+    allData.reverse();
+    tbody.innerHTML = '';
+
+    if (allData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="table-empty-state"><i class="fa-solid fa-folder-open"></i> Belum ada data pengajuan dokumen usaha.</td></tr>`;
+        return;
+    }
+
+    allData.forEach(item => {
+        let badgeColor = item.status === 'WAITING' ? '#f59e0b' : (item.status === 'PROCESS' ? '#3b82f6' : '#10b981');
+        let statusHtml = '';
+
+        if (currentUser === 'admin') {
+            statusHtml = `
+                <select class="form-control" style="padding:0.2rem; font-size:0.75rem; width:100px; border-color:${badgeColor}; color:${badgeColor}; font-weight:bold;" 
+                        onchange="updateStatusDokumen('${item._rtUser}', ${item._idx}, this.value)">
+                    <option value="WAITING" ${item.status === 'WAITING' ? 'selected' : ''}>WAITING</option>
+                    <option value="PROCESS" ${item.status === 'PROCESS' ? 'selected' : ''}>PROCESS</option>
+                    <option value="DONE" ${item.status === 'DONE' ? 'selected' : ''}>DONE</option>
+                </select>
+            `;
+        } else {
+            statusHtml = `<span class="badge" style="background:${badgeColor}; color:#fff;">${item.status}</span>`;
+        }
+
+        let aksiHtml = '';
+        if (currentUser === 'admin') {
+            aksiHtml = `<button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;margin-top:0.3rem;" onclick="hapusDokumen('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i></button>`;
+        } else {
+            aksiHtml = '<span style="font-size:0.75rem; color:var(--text-secondary);"><i class="fa-solid fa-eye"></i> Lihat Saja</span>';
+        }
+
+        const rtLabel = currentUser === 'admin' ? `<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.2rem;"><span class="badge badge-success">${item._rtName || item._rtUser}</span></div>` : '';
+
+        // Format angka modal & penghasilan
+        const formatRp = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+
+        tbody.innerHTML += `
+        <tr>
+            <td style="white-space:nowrap;">${item.tanggal}<br><span style="font-size:0.7rem;color:var(--text-secondary);">${item.id}</span>${rtLabel}</td>
+            <td><span class="badge badge-primary">${item.jenis}</span></td>
+            <td>
+                <div style="font-weight:600;">${item.nama}</div>
+                <div style="font-family:monospace;font-size:0.8rem;">NIK: ${item.nik}</div>
+                <div style="font-size:0.8rem;"><i class="fa-brands fa-whatsapp" style="color:var(--success-color);"></i> ${item.ponsel}</div>
+            </td>
+            <td>
+                <div style="font-weight:600;color:var(--primary-color);"><i class="fa-solid fa-store"></i> ${item.namaUsaha}</div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);">${item.jenisUsaha} (${item.lamaUsaha})</div>
+                <div style="font-size:0.75rem;margin-top:0.2rem;">
+                    Modal: ${formatRp(item.modal)}<br>
+                    Hasil: ${formatRp(item.penghasilan)}/bln
+                </div>
+            </td>
+            <td>${statusHtml}</td>
+            <td>${aksiHtml}</td>
+        </tr>
+        `;
+    });
+}
+
+window.updateStatusDokumen = async function(rtUser, index, newStatus) {
+    showLoading(true);
+    const dokKey = `${rtUser}_rtku_layanan_dokumen`;
+    let arr = await firebaseGet(dokKey) || [];
+    if (arr[index]) {
+        arr[index].status = newStatus;
+        await firebasePut(dokKey, arr);
+        await renderDokumen();
+        showLoading(false);
+        await swalAlert(`Status pengajuan berhasil diubah menjadi ${newStatus}`, 'success');
+    } else {
+        showLoading(false);
+    }
+};
+
+window.hapusDokumen = async function(rtUser, index) {
+    const ok = await swalConfirm('Hapus data pengajuan Dokumen Usaha ini?', 'Hapus Pengajuan');
+    if (!ok) return;
+    showLoading(true);
+    const dokKey = `${rtUser}_rtku_layanan_dokumen`;
+    let arr = await firebaseGet(dokKey) || [];
+    arr.splice(index, 1);
+    await firebasePut(dokKey, arr);
+    await renderDokumen();
     showLoading(false);
     await swalAlert('Data pengajuan berhasil dihapus.', 'success');
 };
