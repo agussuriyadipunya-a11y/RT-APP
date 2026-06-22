@@ -82,9 +82,9 @@
 <body>
 
     <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner"></div>
-        <div style="margin-top: 1rem; font-weight: 500; color: white;">Memproses data...</div>
+    <div id="loading-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center; flex-direction:column; backdrop-filter:blur(4px);">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:3rem; color:var(--primary-color); margin-bottom:1rem;"></i>
+        <div style="font-weight: 500; color: white;">Memproses data...</div>
     </div>
 
     <div class="portal-card">
