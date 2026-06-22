@@ -113,3 +113,39 @@ document.getElementById('form-portal-lapor').addEventListener('submit', async fu
         showAlert('Terjadi kesalahan koneksi server. Silakan coba lagi nanti.', 'error');
     }
 });
+
+// Auto-fill logic
+let allWargaData = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const users = await firebaseGet('rtku_users') || {};
+        const rtList = Object.keys(users).filter(u => u !== 'admin' && users[u].verified !== false);
+        for (const rtUsername of rtList) {
+            const dataKK = await firebaseGet(`${rtUsername}_rtku_kk`) || [];
+            dataKK.forEach(kk => {
+                allWargaData.push({
+                    nama: kk.kepalaKeluarga,
+                    ponsel: kk.ponsel,
+                    noReg: kk.noReg
+                });
+            });
+        }
+    } catch(e) {
+        console.error("Gagal load data warga untuk auto-fill", e);
+    }
+});
+
+function checkAutoFill(field, value) {
+    if (!value || allWargaData.length === 0) return;
+    const match = allWargaData.find(w => w[field].toLowerCase() === value.toLowerCase());
+    if (match) {
+        document.getElementById('input-nama').value = match.nama;
+        document.getElementById('input-ponsel').value = match.ponsel;
+        document.getElementById('input-noreg').value = match.noReg;
+    }
+}
+
+document.getElementById('input-noreg').addEventListener('input', function() { checkAutoFill('noReg', this.value.trim()); });
+document.getElementById('input-ponsel').addEventListener('input', function() { checkAutoFill('ponsel', this.value.trim()); });
+document.getElementById('input-nama').addEventListener('blur', function() { checkAutoFill('nama', this.value.trim()); });
