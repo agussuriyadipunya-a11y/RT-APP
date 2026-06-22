@@ -118,6 +118,7 @@ body {
     transition: transform var(--transition-normal);
     z-index: 50;
     box-shadow: var(--shadow-lg);
+    overflow: hidden; /* Penting: biarkan anak yang scroll */
 }
 
 .sidebar-header {
@@ -130,11 +131,15 @@ body {
     align-items: center;
     gap: 0.5rem;
     justify-content: center;
+    flex-shrink: 0; /* Logo TIDAK ikut scroll */
 }
 
 .sidebar-nav {
     flex: 1;
     padding: 1.5rem 0;
+    overflow-y: auto; /* Hanya menu yang scroll */
+    scrollbar-width: thin;
+    scrollbar-color: var(--sidebar-hover) transparent;
 }
 
 .nav-item {
