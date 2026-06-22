@@ -225,7 +225,7 @@ document.getElementById('form-register')?.addEventListener('submit', async funct
         title: 'Pendaftaran Berhasil!',
         html: '<div style="line-height:1.6; font-weight:500;">TERIMA KASIH TELAH MENGGUNAKAN LAYANAN RT-KU<br><br>USER BISA DIGUNAKAN UNTUK LOGIN SETELAH ADMIN MEMVERIFIKASI USER KAMU<br><br>PASTIKAN DATA PENGURUS DAN ALAMAT SEKRETARIAT SUDAH DISIAPKAN</div>',
         confirmButtonText: 'OK',
-        confirmButtonColor: 'var(--primary-color)'
+        confirmButtonColor: '#4f46e5'
     });
     toggleAuth('login');
 });
