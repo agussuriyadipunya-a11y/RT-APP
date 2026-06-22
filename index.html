@@ -27,7 +27,7 @@
     <!-- Authentication Container -->
     <div id="auth-container">
         <div class="auth-card" id="login-card">
-            <div class="auth-logo" style="height: 150px; width: 150px; margin: 0 auto 1rem auto; overflow: hidden;"><img src="logo.png" alt="RT-KU Logo" style="height: 100%; width: 100%; object-fit: contain;"></div>
+            <div class="auth-logo" style="height: 150px; width: 150px; margin: 0 auto 1rem auto; overflow: hidden; border-radius: 24px; display: flex; justify-content: center; align-items: center;"><img src="logo.png" alt="RT-KU Logo" style="width: 140%; height: auto; object-fit: contain;"></div>
             <h2 class="auth-title">Masuk ke RT-KU</h2>
             <p class="auth-subtitle">Sistem Informasi Pengelolaan Warga</p>
             <form id="form-login">
@@ -45,7 +45,7 @@
         </div>
 
         <div class="auth-card" id="register-card" style="display: none;">
-            <div class="auth-logo" style="height: 150px; width: 150px; margin: 0 auto 1rem auto; overflow: hidden;"><img src="logo.png" alt="RT-KU Logo" style="height: 100%; width: 100%; object-fit: contain;"></div>
+            <div class="auth-logo" style="height: 150px; width: 150px; margin: 0 auto 1rem auto; overflow: hidden; border-radius: 24px; display: flex; justify-content: center; align-items: center;"><img src="logo.png" alt="RT-KU Logo" style="width: 140%; height: auto; object-fit: contain;"></div>
             <h2 class="auth-title">Daftar Admin RT</h2>
             <p class="auth-subtitle">Buat ruang terisolasi untuk RT Anda</p>
             <form id="form-register">
@@ -72,8 +72,8 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header" style="justify-content: center; padding: 1.5rem 1rem;">
-                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
-                    <img src="logo.png" alt="RT-KU Logo" style="width: 200px; height: auto; object-fit: contain; cursor: pointer; transition: transform 0.2s ease;" onclick="openTentangAplikasi()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Tentang Aplikasi">
+                <div style="width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 24px; cursor: pointer; transition: transform 0.2s ease;" onclick="openTentangAplikasi()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Tentang Aplikasi">
+                    <img src="logo.png" alt="RT-KU Logo" style="width: 140%; height: auto; object-fit: contain;">
                 </div>
             </div>
             <nav class="sidebar-nav">
@@ -908,7 +908,9 @@
                 <button class="close-btn" onclick="hideModal('modal-tentang-aplikasi')">&times;</button>
             </div>
             <div style="text-align:center; margin-bottom:1.5rem;">
-                <img src="logo.png" alt="RT-KU Logo" style="width: 120px; height: auto; margin-bottom:1rem;">
+                <div style="width: 120px; height: 120px; margin: 0 auto 1rem auto; overflow: hidden; border-radius: 16px; display: flex; justify-content: center; align-items: center;">
+                    <img src="logo.png" alt="RT-KU Logo" style="width: 140%; height: auto;">
+                </div>
                 <h4 style="margin:0; font-size:1.5rem; color:var(--primary-color);">RT-KU</h4>
                 <p style="color:var(--text-secondary); margin-top:0.5rem; font-size:0.9rem;">Kelola Data Warga, Lingkungan Maju</p>
             </div>
