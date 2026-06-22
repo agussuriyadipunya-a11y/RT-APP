@@ -509,11 +509,152 @@ function refreshSection(id) {
     else if (id === 'lapor')      { renderLapor(); }
     else if (id === 'dokumentasi'){ renderDokumentasi(); }
     else if (id === 'pindah-domisili') { renderPindah(); }
+    else if (id === 'bpjs-kesehatan')  { renderBpjs(); }
     else if (id === 'manajemen-user')  { renderUserManagement(); }
     else if (id === 'kepengurusan-rt') { renderEditKepengurusan(); }
     else if (id === 'tentang-aplikasi-admin') { renderEditTentang(); }
     else if (id === 'arsip-data')      { renderArsip(); }
 }
+
+// ======================== BPJS KESEHATAN (VIP) ========================
+document.getElementById('form-bpjs')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const cekKtp  = document.getElementById('bpjs-cek-ktp').checked;
+    const cekKk   = document.getElementById('bpjs-cek-kk').checked;
+    const cekSktm = document.getElementById('bpjs-cek-sktm').checked;
+
+    if (!cekKtp || !cekKk || !cekSktm) {
+        await swalAlert('Semua berkas (Fotocopy KTP, KK, dan SKTM Kelurahan) harus dilengkapi terlebih dahulu!', 'warning', 'Berkas Belum Lengkap');
+        return;
+    }
+
+    showLoading(true);
+    const rtTarget = (currentUser === 'admin') ? activeRT : currentUser;
+    const bpjsKey = `${rtTarget}_rtku_bpjs`;
+    let arr = await firebaseGet(bpjsKey) || [];
+
+    const now = new Date();
+    const tgl = now.toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+    arr.push({
+        tgl,
+        nama: document.getElementById('bpjs-nama').value,
+        nik: document.getElementById('bpjs-nik').value,
+        nokk: document.getElementById('bpjs-nokk').value,
+        tglLahir: document.getElementById('bpjs-tgl-lahir').value,
+        alamat: document.getElementById('bpjs-alamat').value,
+        ponsel: document.getElementById('bpjs-ponsel').value,
+        berkas: { ktp: cekKtp, kk: cekKk, sktm: cekSktm },
+        status: 'WAITING',
+        _rtUser: rtTarget
+    });
+
+    await firebasePut(bpjsKey, arr);
+    this.reset();
+    document.getElementById('bpjs-form-area').style.display = 'none';
+    await renderBpjs();
+    showLoading(false);
+    await swalAlert('Pengajuan BPJS Kesehatan berhasil dikirim!', 'success', 'Terkirim');
+});
+
+async function renderBpjs() {
+    const tbody = document.getElementById('tbody-bpjs');
+    if (!tbody) return;
+
+    let allData = [];
+
+    if (currentUser === 'admin') {
+        // Superadmin: ambil data dari SEMUA RT
+        let users = await firebaseGet('rtku_users') || {};
+        for (const u of Object.keys(users)) {
+            if (u === 'admin') continue;
+            const arr = await firebaseGet(`${u}_rtku_bpjs`) || [];
+            arr.forEach((item, idx) => {
+                allData.push({ ...item, _rtUser: u, _rtName: users[u]?.name || u, _idx: idx });
+            });
+        }
+    } else {
+        const arr = await firebaseGet(`${currentUser}_rtku_bpjs`) || [];
+        arr.forEach((item, idx) => {
+            allData.push({ ...item, _rtUser: currentUser, _idx: idx });
+        });
+    }
+
+    if (allData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="table-empty-state"><i class="fa-solid fa-box-open"></i>Belum ada pengajuan BPJS Kesehatan.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = '';
+    [...allData].reverse().forEach(item => {
+        const berkasIcons = [
+            item.berkas?.ktp  ? '<span style="color:var(--success-color);"><i class="fa-solid fa-check-circle"></i> KTP</span>' : '<span style="color:var(--danger-color);"><i class="fa-solid fa-times-circle"></i> KTP</span>',
+            item.berkas?.kk   ? '<span style="color:var(--success-color);"><i class="fa-solid fa-check-circle"></i> KK</span>'  : '<span style="color:var(--danger-color);"><i class="fa-solid fa-times-circle"></i> KK</span>',
+            item.berkas?.sktm ? '<span style="color:var(--success-color);"><i class="fa-solid fa-check-circle"></i> SKTM</span>': '<span style="color:var(--danger-color);"><i class="fa-solid fa-times-circle"></i> SKTM</span>'
+        ].join('<br>');
+
+        let statusBadge = '';
+        if (item.status === 'WAITING') statusBadge = '<span style="background:#f59e0b;color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-clock"></i> WAITING</span>';
+        else if (item.status === 'PROCESS') statusBadge = '<span style="background:#3b82f6;color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-spinner"></i> PROCESS</span>';
+        else if (item.status === 'DONE') statusBadge = '<span style="background:var(--success-color);color:#fff;padding:0.2rem 0.6rem;border-radius:12px;font-size:0.75rem;"><i class="fa-solid fa-check"></i> DONE</span>';
+
+        let aksiHtml = '';
+        if (currentUser === 'admin') {
+            aksiHtml = `
+                <select class="form-control" style="font-size:0.75rem; padding:0.2rem 0.4rem; width:auto;" onchange="ubahStatusBpjs('${item._rtUser}', ${item._idx}, this.value)">
+                    <option value="WAITING" ${item.status==='WAITING'?'selected':''}>WAITING</option>
+                    <option value="PROCESS" ${item.status==='PROCESS'?'selected':''}>PROCESS</option>
+                    <option value="DONE" ${item.status==='DONE'?'selected':''}>DONE</option>
+                </select>
+                <button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;margin-top:0.3rem;" onclick="hapusBpjs('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i></button>
+            `;
+        } else {
+            aksiHtml = `<button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;" onclick="hapusBpjs('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i> Hapus</button>`;
+        }
+
+        const rtLabel = currentUser === 'admin' ? `<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.2rem;"><span class="badge badge-success">${item._rtName || item._rtUser}</span></div>` : '';
+
+        tbody.innerHTML += `<tr>
+            <td>${item.tgl}</td>
+            <td>${item.nama}${rtLabel}</td>
+            <td style="font-family:monospace;">${item.nik}</td>
+            <td style="font-family:monospace;">${item.nokk}</td>
+            <td>${item.tglLahir}</td>
+            <td><a href="tel:${item.ponsel}" style="color:var(--primary-color);text-decoration:none;"><i class="fa-solid fa-phone" style="font-size:0.7rem;"></i> ${item.ponsel}</a></td>
+            <td>${berkasIcons}</td>
+            <td>${statusBadge}</td>
+            <td>${aksiHtml}</td>
+        </tr>`;
+    });
+}
+
+window.ubahStatusBpjs = async function(rtUser, index, newStatus) {
+    showLoading(true);
+    const bpjsKey = `${rtUser}_rtku_bpjs`;
+    let arr = await firebaseGet(bpjsKey) || [];
+    if (arr[index]) {
+        arr[index].status = newStatus;
+        await firebasePut(bpjsKey, arr);
+        await renderBpjs();
+        showLoading(false);
+        await swalAlert(`Status pengajuan berhasil diubah menjadi ${newStatus}`, 'success');
+    } else {
+        showLoading(false);
+    }
+};
+
+window.hapusBpjs = async function(rtUser, index) {
+    const ok = await swalConfirm('Hapus data pengajuan BPJS ini?', 'Hapus Pengajuan');
+    if (!ok) return;
+    showLoading(true);
+    const bpjsKey = `${rtUser}_rtku_bpjs`;
+    let arr = await firebaseGet(bpjsKey) || [];
+    arr.splice(index, 1);
+    await firebasePut(bpjsKey, arr);
+    await renderBpjs();
+    showLoading(false);
+    await swalAlert('Data pengajuan BPJS berhasil dihapus.', 'success');
+};
 
 // ======================== NAVIGATION ========================
 document.querySelectorAll('.nav-item').forEach(item => {

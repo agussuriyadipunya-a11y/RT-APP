@@ -333,12 +333,93 @@
                 <!-- ================= VIP SECTIONS ================= -->
                 <!-- BPJS Kesehatan -->
                 <section id="bpjs-kesehatan" class="page-section">
+                    <div class="card" style="margin-bottom:1.5rem;">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fa-solid fa-heart-pulse" style="color:var(--primary-color);"></i> Pengajuan BPJS Kesehatan Gratis (APBD)</h2>
+                            <button class="btn btn-primary" onclick="document.getElementById('bpjs-form-area').style.display = document.getElementById('bpjs-form-area').style.display === 'none' ? 'block' : 'none'">
+                                <i class="fa-solid fa-plus"></i> Ajukan Baru
+                            </button>
+                        </div>
+
+                        <!-- Form Pengajuan -->
+                        <div id="bpjs-form-area" style="display:none; padding:1.5rem; border-top:1px solid var(--border-color);">
+                            <h3 style="margin-bottom:1rem; color:var(--primary-color);"><i class="fa-solid fa-file-medical"></i> Form Pengajuan BPJS Kesehatan</h3>
+                            <form id="form-bpjs">
+                                <div class="d-flex gap-4" style="flex-wrap:wrap;">
+                                    <div class="form-group" style="flex:1; min-width:250px;">
+                                        <label class="form-label">Nama Calon Peserta BPJS</label>
+                                        <input type="text" id="bpjs-nama" class="form-control" required placeholder="Nama lengkap">
+                                    </div>
+                                    <div class="form-group" style="flex:1; min-width:250px;">
+                                        <label class="form-label">NIK</label>
+                                        <input type="text" id="bpjs-nik" class="form-control" required placeholder="16 digit NIK" pattern="\d{16}" maxlength="16" minlength="16" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)">
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-4" style="flex-wrap:wrap;">
+                                    <div class="form-group" style="flex:1; min-width:250px;">
+                                        <label class="form-label">Nomor KK</label>
+                                        <input type="text" id="bpjs-nokk" class="form-control" required placeholder="16 digit No KK" pattern="\d{16}" maxlength="16" minlength="16" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)">
+                                    </div>
+                                    <div class="form-group" style="flex:1; min-width:250px;">
+                                        <label class="form-label">Tanggal Lahir</label>
+                                        <input type="date" id="bpjs-tgl-lahir" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Alamat Lengkap</label>
+                                    <textarea id="bpjs-alamat" class="form-control" required rows="2" placeholder="Alamat lengkap calon peserta"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nomor Ponsel</label>
+                                    <input type="text" id="bpjs-ponsel" class="form-control" required placeholder="08xxxxxxxxxx" pattern="\d{10,13}" maxlength="13" minlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,13)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" style="margin-bottom:0.75rem; font-weight:600;"><i class="fa-solid fa-paperclip"></i> Checklist Kelengkapan Berkas</label>
+                                    <div style="display:flex; flex-direction:column; gap:0.5rem; padding:1rem; background:var(--background-color); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+                                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                            <input type="checkbox" id="bpjs-cek-ktp" style="width:18px; height:18px; accent-color:var(--primary-color);">
+                                            <span>Fotocopy KTP</span>
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                            <input type="checkbox" id="bpjs-cek-kk" style="width:18px; height:18px; accent-color:var(--primary-color);">
+                                            <span>Fotocopy KK</span>
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                            <input type="checkbox" id="bpjs-cek-sktm" style="width:18px; height:18px; accent-color:var(--primary-color);">
+                                            <span>SKTM Kelurahan</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem;">
+                                    <button type="button" class="btn btn-outline" onclick="document.getElementById('bpjs-form-area').style.display='none'">Batal</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> KIRIM</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Data Pengajuan -->
                     <div class="card">
-                        <div class="card-header"><h2 class="card-title">BPJS Kesehatan (Fitur VIP)</h2></div>
-                        <div style="text-align:center; padding: 3rem 1rem;">
-                            <i class="fa-solid fa-heart-pulse" style="font-size:3rem; color:var(--primary-color); margin-bottom:1rem;"></i>
-                            <h3 style="font-size:1.5rem; color:var(--text-primary); margin-bottom:0.5rem;">Layanan BPJS Terintegrasi</h3>
-                            <p style="color:var(--text-secondary);">Fitur ini sedang dalam pengembangan.</p>
+                        <div class="card-header"><h2 class="card-title"><i class="fa-solid fa-list-check"></i> Data Pengajuan BPJS</h2></div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Nama</th>
+                                        <th>NIK</th>
+                                        <th>No KK</th>
+                                        <th>Tgl Lahir</th>
+                                        <th>Ponsel</th>
+                                        <th>Berkas</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-bpjs"></tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
