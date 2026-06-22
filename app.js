@@ -285,6 +285,7 @@ async function initApp() {
         navManajemen.style.display = 'flex';
         navPindah.style.display    = 'flex';
         document.getElementById('nav-kepengurusan').style.display = 'flex';
+        document.getElementById('nav-tentang').style.display = 'flex';
         document.getElementById('nav-arsip').style.display = 'flex';
         await populateAdminSelector();
         document.getElementById('dash-username').innerText = "Super Admin (Global)";
@@ -293,6 +294,7 @@ async function initApp() {
         navManajemen.style.display = 'none';
         navPindah.style.display    = 'flex';
         document.getElementById('nav-kepengurusan').style.display = 'none';
+        document.getElementById('nav-tentang').style.display = 'none';
         document.getElementById('nav-arsip').style.display = 'none';
         document.getElementById('dash-username').innerText = currentName;
     }
@@ -372,6 +374,33 @@ document.getElementById('form-edit-kepengurusan')?.addEventListener('submit', as
     await swalAlert(`Profil kepengurusan berhasil diperbarui!`, 'success', 'Disimpan');
 });
 
+// ======================== TENTANG APLIKASI ========================
+async function openTentangAplikasi() {
+    showLoading(true);
+    const text = await firebaseGet('global_rtku_tentang') || 'Aplikasi RT-KU membantu mempermudah pengelolaan data kependudukan dan surat-menyurat di lingkungan RT secara digital.\n\nBelum ada deskripsi yang diatur oleh admin.';
+    document.getElementById('content-tentang-aplikasi').innerText = text;
+    showLoading(false);
+    document.getElementById('modal-tentang-aplikasi').classList.add('active');
+}
+
+async function renderEditTentang() {
+    if (currentUser !== 'admin') return;
+    showLoading(true);
+    const text = await firebaseGet('global_rtku_tentang') || '';
+    document.getElementById('input-edit-tentang').value = text;
+    showLoading(false);
+}
+
+document.getElementById('form-edit-tentang')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (currentUser !== 'admin') return;
+    showLoading(true);
+    const text = document.getElementById('input-edit-tentang').value;
+    await firebasePut('global_rtku_tentang', text);
+    showLoading(false);
+    await swalAlert('Informasi "Tentang Aplikasi" berhasil diperbarui!', 'success', 'Berhasil Disimpan');
+});
+
 async function populateAdminSelector() {
     const selector = document.getElementById('admin-rt-selector');
     selector.innerHTML = '<option value="all">Semua Data (Global)</option>';
@@ -403,6 +432,7 @@ function refreshSection(id) {
     else if (id === 'pindah-domisili') { renderPindah(); }
     else if (id === 'manajemen-user')  { renderUserManagement(); }
     else if (id === 'kepengurusan-rt') { renderEditKepengurusan(); }
+    else if (id === 'tentang-aplikasi-admin') { renderEditTentang(); }
     else if (id === 'arsip-data')      { renderArsip(); }
 }
 
