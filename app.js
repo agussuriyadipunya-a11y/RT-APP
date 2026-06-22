@@ -127,6 +127,8 @@ document.getElementById('form-login')?.addEventListener('submit', async function
         currentName = users[username].name;
         activeRT    = (username === 'admin') ? 'all' : username;
         
+        localStorage.setItem('session_user', JSON.stringify({ username: currentUser, name: currentName, activeRT: activeRT }));
+        
         document.getElementById('auth-container').style.opacity = '0';
         setTimeout(async () => {
             document.getElementById('auth-container').style.display = 'none';
@@ -142,6 +144,7 @@ document.getElementById('form-login')?.addEventListener('submit', async function
 
 function logout() {
     currentUser = null; currentName = ""; activeRT = null;
+    localStorage.removeItem('session_user');
     document.getElementById('app-container').style.display = 'none';
     const auth = document.getElementById('auth-container');
     auth.style.display = 'flex';
@@ -1284,3 +1287,21 @@ async function hapusPermanenArsipAnggota(index) {
     showLoading(false);
     alert('Arsip Anggota berhasil dihapus permanen.');
 }
+
+// Auto-login jika session_user ada
+(async function checkSession() {
+    const saved = localStorage.getItem('session_user');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            currentUser = parsed.username;
+            currentName = parsed.name;
+            activeRT = parsed.activeRT;
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            await initApp();
+        } catch(e) {
+            console.error(e);
+        }
+    }
+})();
