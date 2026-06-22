@@ -548,7 +548,7 @@ async function hapusKK(noKK) {
     if (!rtTarget) { await swalAlert('Pilih RT terlebih dahulu.', 'info'); return; }
     const kk = dataKK.find(k => k.noKK === noKK);
     if (!kk) return;
-    const ok1 = await swalConfirm(`Hapus KK "${kk.kepalaKeluarga}" (${noKK}) beserta ${kk.anggota.length} anggota? Data akan dipindahkan ke Arsip Data.`, 'Hapus KK?');
+    const ok1 = await swalConfirm(`Apakah Anda yakin ingin menghapus KK "${kk.kepalaKeluarga}" (${noKK}) beserta ${kk.anggota.length} anggota?`, 'Hapus KK?');
     if (!ok1) return;
 
     showLoading(true);
@@ -674,7 +674,7 @@ async function hapusAnggota(noKK, nik) {
     if (kkIndex === -1) { showLoading(false); return; }
     const anggota = kks[kkIndex].anggota.find(a => a.nik === nik);
     if (!anggota) { showLoading(false); return; }
-    const ok2 = await swalConfirm(`Hapus data "${anggota.nama}" (NIK: ${nik})? Data akan dipindahkan ke Arsip Data.`, 'Hapus Anggota?');
+    const ok2 = await swalConfirm(`Apakah Anda yakin ingin menghapus data "${anggota.nama}" (NIK: ${nik})?`, 'Hapus Anggota?');
     if (!ok2) { showLoading(false); return; }
 
     await simpanKeArsip(rtTarget, 'anggota', {
