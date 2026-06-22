@@ -527,7 +527,20 @@ document.querySelectorAll('.nav-item').forEach(item => {
             let users = await firebaseGet('rtku_users') || {};
             let userRole = users[currentUser]?.role || 'PRO'; // Default lama dianggap PRO
             if (userRole !== 'VIP' && userRole !== 'superadmin') {
-                await swalAlert('UPGRADE LAYANAN APLIKASI ANDA', 'warning', 'Fitur Eksklusif VIP');
+                Swal.fire({
+                    title: 'Fitur Eksklusif VIP',
+                    html: 'MOHON MAAF .. MENU INI HANYA UNTUK PENGGUNA LAYANAN VIP KAMI<br><br>JIKA ANDA INGIN MENGGUNAKAN LAYANAN INI KLIK UPGRADE',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fa-brands fa-whatsapp"></i> UPGRADE',
+                    cancelButtonText: 'Tutup',
+                    confirmButtonColor: '#25D366'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const waText = encodeURIComponent(`Hai admin , saya ${currentUser} ingin upgrade kelayanan VIP `);
+                        window.open(`https://wa.me/62817319885?text=${waText}`, '_blank');
+                    }
+                });
                 return; // Batalkan perpindahan halaman
             }
         }
