@@ -563,6 +563,11 @@ async function renderBpjs() {
 
     let allData = [];
 
+    const btnAjukan = document.getElementById('btn-ajukan-bpjs');
+    if (btnAjukan) {
+        btnAjukan.style.display = (currentUser === 'admin') ? 'none' : 'block';
+    }
+
     if (currentUser === 'admin') {
         // Superadmin: ambil data dari SEMUA RT
         let users = await firebaseGet('rtku_users') || {};
