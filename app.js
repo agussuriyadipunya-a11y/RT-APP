@@ -5,6 +5,41 @@ function showLoading(show) {
     document.getElementById('global-loader').style.display = show ? 'flex' : 'none';
 }
 
+// ===== Modern Alert & Confirm (SweetAlert2) =====
+function swalAlert(message, icon = 'success', title = '') {
+    return Swal.fire({
+        icon,
+        title: title || (icon === 'success' ? 'Berhasil!' : icon === 'error' ? 'Perhatian!' : 'Info'),
+        text: message,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#4f46e5',
+        background: '#ffffff',
+        borderRadius: '16px',
+        customClass: {
+            popup: 'swal-popup-custom',
+            confirmButton: 'swal-btn-custom'
+        }
+    });
+}
+
+function swalConfirm(message, title = 'Konfirmasi', icon = 'warning') {
+    return Swal.fire({
+        icon,
+        title,
+        text: message,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Lanjutkan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        background: '#ffffff',
+        reverseButtons: true,
+        customClass: {
+            popup: 'swal-popup-custom'
+        }
+    }).then(r => r.isConfirmed);
+}
+
 async function firebaseGet(path) {
     try {
         const response = await fetch(`${FIREBASE_DB_URL}/${path}.json`);
@@ -100,13 +135,13 @@ document.getElementById('form-register')?.addEventListener('submit', async funct
     let users = await firebaseGet('rtku_users') || {};
     if (users[username]) { 
         showLoading(false);
-        alert('Username sudah terpakai!'); 
+        await swalAlert('Username sudah terpakai!', 'error'); 
         return; 
     }
     users[username] = { name, password, role: "admin", verified: false };
     await firebasePut('rtku_users', users);
     showLoading(false);
-    alert('Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi dari Superadmin.');
+    await swalAlert('Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi dari Superadmin.', 'success', 'Pendaftaran Berhasil');
     toggleAuth('login');
 });
 
@@ -120,7 +155,7 @@ document.getElementById('form-login')?.addEventListener('submit', async function
     if (users[username] && users[username].password === password) {
         if (users[username].role !== 'superadmin' && users[username].verified === false) {
             showLoading(false);
-            alert('Akun Anda belum diverifikasi oleh Superadmin. Harap tunggu atau hubungi Superadmin.');
+            await swalAlert('Akun Anda belum diverifikasi oleh Superadmin. Harap tunggu atau hubungi Superadmin.', 'warning', 'Akun Belum Aktif');
             return;
         }
         currentUser = username;
@@ -138,7 +173,7 @@ document.getElementById('form-login')?.addEventListener('submit', async function
         }, 300);
     } else {
         showLoading(false);
-        alert('Username atau password salah!');
+        await swalAlert('Username atau password salah!', 'error', 'Login Gagal');
     }
 });
 
@@ -308,7 +343,7 @@ async function showModal(id) {
             Object.keys(users).forEach(u => {
                 if (u !== 'admin') { opts += `<option value="${u}">Data ${users[u].name} (${u})</option>`; hasUsers = true; }
             });
-            if (!hasUsers) { alert("Belum ada akun RT terdaftar."); return; }
+            if (!hasUsers) { await swalAlert('Belum ada akun RT terdaftar.', 'info'); return; }
             const div = document.createElement('div');
             div.className = 'form-group dynamic-rt-target';
             div.style.cssText = 'background:#fef2f2;padding:0.75rem;border-radius:var(--radius-md);border:1px dashed var(--danger-color);';
@@ -468,9 +503,9 @@ document.getElementById('form-add-kk')?.addEventListener('submit', async functio
         const kks = await firebaseGet(`${u}_rtku_kk`) || [];
         if (kks.find(k => k.noKK === noKK)) isExist = true;
     }
-    if (isExist) { showLoading(false); alert('Nomor KK sudah terdaftar!'); return; }
+    if (isExist) { showLoading(false); await swalAlert('Nomor KK sudah terdaftar!', 'error'); return; }
     const targetRT = getTargetRT(this);
-    if (!targetRT) { showLoading(false); alert('Pilih RT tujuan!'); return; }
+    if (!targetRT) { showLoading(false); await swalAlert('Pilih RT tujuan!', 'info'); return; }
     const newKK = {
         noReg: generateNoReg(), noKK,
         kepalaKeluarga: document.getElementById('input-kepala').value,
@@ -504,16 +539,17 @@ document.getElementById('form-add-kk')?.addEventListener('submit', async functio
     renderKKList();
     hideModal('modal-add-kk');
     showLoading(false);
-    alert(`Data KK disimpan! No. Reg: ${newKK.noReg}`);
+    await swalAlert(`Data KK disimpan! No. Reg: ${newKK.noReg}`, 'success', 'Data Tersimpan');
 });
 
 // ======================== HAPUS KK → ARSIP ========================
 async function hapusKK(noKK) {
     const rtTarget = activeRT === 'all' ? null : activeRT;
-    if (!rtTarget) { alert('Pilih RT terlebih dahulu.'); return; }
+    if (!rtTarget) { await swalAlert('Pilih RT terlebih dahulu.', 'info'); return; }
     const kk = dataKK.find(k => k.noKK === noKK);
     if (!kk) return;
-    if (!confirm(`Hapus KK "${kk.kepalaKeluarga}" (${noKK}) beserta ${kk.anggota.length} anggota?\nData akan dipindahkan ke Arsip Data dan hanya bisa dilihat oleh Super Admin.`)) return;
+    const ok1 = await swalConfirm(`Hapus KK "${kk.kepalaKeluarga}" (${noKK}) beserta ${kk.anggota.length} anggota? Data akan dipindahkan ke Arsip Data.`, 'Hapus KK?');
+    if (!ok1) return;
 
     showLoading(true);
     await simpanKeArsip(rtTarget, 'kk', {
@@ -532,7 +568,7 @@ async function hapusKK(noKK) {
     await firebasePut(`${rtTarget}_rtku_kk`, kks);
     await loadData(); updateDashboardStats(); renderKKList();
     showLoading(false);
-    alert(`KK ${noKK} berhasil diarsipkan. Data dapat dilihat di menu Arsip Data.`);
+    await swalAlert(`KK ${noKK} berhasil diarsipkan. Data dapat dilihat di menu Arsip Data.`, 'success', 'Berhasil Diarsipkan');
 }
 
 // ======================== DETAIL KK & ANGGOTA ========================
@@ -638,7 +674,8 @@ async function hapusAnggota(noKK, nik) {
     if (kkIndex === -1) { showLoading(false); return; }
     const anggota = kks[kkIndex].anggota.find(a => a.nik === nik);
     if (!anggota) { showLoading(false); return; }
-    if (!confirm(`Hapus data "${anggota.nama}" (NIK: ${nik})?\nData akan dipindahkan ke Arsip Data dan hanya bisa dilihat oleh Super Admin.`)) { showLoading(false); return; }
+    const ok2 = await swalConfirm(`Hapus data "${anggota.nama}" (NIK: ${nik})? Data akan dipindahkan ke Arsip Data.`, 'Hapus Anggota?');
+    if (!ok2) { showLoading(false); return; }
 
     await simpanKeArsip(rtTarget, 'anggota', {
         tglHapus: new Date().toLocaleDateString('id-ID'),
@@ -658,7 +695,7 @@ async function hapusAnggota(noKK, nik) {
     if (updatedKK) renderAnggotaList(updatedKK);
     updateDashboardStats();
     showLoading(false);
-    alert(`Anggota "${anggota.nama}" berhasil diarsipkan. Data dapat dilihat di menu Arsip Data.`);
+    await swalAlert(`Anggota "${anggota.nama}" berhasil diarsipkan. Data dapat dilihat di menu Arsip Data.`, 'success', 'Berhasil Diarsipkan');
 }
 
 async function simpanKeArsip(rtUser, jenis, data) {
@@ -709,13 +746,13 @@ document.getElementById('form-edit-member')?.addEventListener('submit', async fu
     const noKK  = document.getElementById('edit-member-nokk').value;
     const nik   = document.getElementById('edit-member-nik-original').value;
     const rtTarget = currentViewRTOwner || (activeRT !== 'all' ? activeRT : null);
-    if (!rtTarget) { showLoading(false); alert('RT tidak ditemukan.'); return; }
+    if (!rtTarget) { showLoading(false); await swalAlert('RT tidak ditemukan.', 'error'); return; }
 
     let kks = await firebaseGet(`${rtTarget}_rtku_kk`) || [];
     const kkIndex  = kks.findIndex(k => k.noKK === noKK);
-    if (kkIndex === -1) { showLoading(false); alert('Data KK tidak ditemukan.'); return; }
+    if (kkIndex === -1) { showLoading(false); await swalAlert('Data KK tidak ditemukan.', 'error'); return; }
     const angIndex = kks[kkIndex].anggota.findIndex(a => a.nik === nik);
-    if (angIndex === -1) { showLoading(false); alert('Data anggota tidak ditemukan.'); return; }
+    if (angIndex === -1) { showLoading(false); await swalAlert('Data anggota tidak ditemukan.', 'error'); return; }
 
     kks[kkIndex].anggota[angIndex] = {
         ...kks[kkIndex].anggota[angIndex],
@@ -734,7 +771,7 @@ document.getElementById('form-edit-member')?.addEventListener('submit', async fu
     if (updatedKK) renderAnggotaList(updatedKK);
     hideModal('modal-edit-member');
     showLoading(false);
-    alert(`Data anggota berhasil diperbarui!`);
+    await swalAlert('Data anggota berhasil diperbarui!', 'success');
 });
 
 document.getElementById('form-add-member')?.addEventListener('submit', async function(e) {
@@ -744,7 +781,7 @@ document.getElementById('form-add-member')?.addEventListener('submit', async fun
     const targetRT = getTargetRT(this) || currentViewRTOwner || activeRT;
     let kks = await firebaseGet(`${targetRT}_rtku_kk`) || [];
     const kkIndex = kks.findIndex(k => k.noKK === noKK);
-    if (kkIndex === -1) { showLoading(false); alert('Data KK tidak ditemukan.'); return; }
+    if (kkIndex === -1) { showLoading(false); await swalAlert('Data KK tidak ditemukan.', 'error'); return; }
 
     const nik = document.getElementById('input-nik').value;
     let isExist = false;
@@ -753,7 +790,7 @@ document.getElementById('form-add-member')?.addEventListener('submit', async fun
         const allKk = await firebaseGet(`${u}_rtku_kk`) || [];
         allKk.forEach(k => { if (k.anggota.find(a => a.nik === nik)) isExist = true; });
     }
-    if (isExist) { showLoading(false); alert('NIK sudah terdaftar!'); return; }
+    if (isExist) { showLoading(false); await swalAlert('NIK sudah terdaftar!', 'error'); return; }
 
     const newAnggota = {
         noReg: generateNoReg(), nik,
@@ -773,7 +810,7 @@ document.getElementById('form-add-member')?.addEventListener('submit', async fun
     updateDashboardStats();
     hideModal('modal-add-member');
     showLoading(false);
-    alert(`Anggota ditambahkan! No. Reg: ${newAnggota.noReg}`);
+    await swalAlert(`Anggota ditambahkan! No. Reg: ${newAnggota.noReg}`, 'success', 'Anggota Ditambahkan');
 });
 
 function openPindahKK(noKK) {
@@ -812,11 +849,11 @@ document.getElementById('form-pindah')?.addEventListener('submit', async functio
     const keterangan = document.getElementById('input-pindah-keterangan').value;
 
     const rtTarget = currentViewRTOwner || (activeRT !== 'all' ? activeRT : null);
-    if (!rtTarget) { showLoading(false); alert('Tidak bisa menentukan RT pemilik data.'); return; }
+    if (!rtTarget) { showLoading(false); await swalAlert('Tidak bisa menentukan RT pemilik data.', 'error'); return; }
 
     let kks = await firebaseGet(`${rtTarget}_rtku_kk`) || [];
     const kkIndex = kks.findIndex(k => k.noKK === noKK);
-    if (kkIndex === -1) { showLoading(false); alert('Data KK tidak ditemukan.'); return; }
+    if (kkIndex === -1) { showLoading(false); await swalAlert('Data KK tidak ditemukan.', 'error'); return; }
     const kk = kks[kkIndex];
 
     let recordPindah = null;
@@ -830,7 +867,7 @@ document.getElementById('form-pindah')?.addEventListener('submit', async functio
         kks.splice(kkIndex, 1);
     } else {
         const angIndex = kk.anggota.findIndex(a => a.nik === nik);
-        if (angIndex === -1) { showLoading(false); alert('Data anggota tidak ditemukan.'); return; }
+        if (angIndex === -1) { showLoading(false); await swalAlert('Data anggota tidak ditemukan.', 'error'); return; }
         const ang = kk.anggota[angIndex];
         recordPindah = {
             tgl, jenis: 'Anggota', nama: ang.nama,
@@ -851,7 +888,7 @@ document.getElementById('form-pindah')?.addEventListener('submit', async functio
     hideModal('modal-pindah');
     backToKKList();
     showLoading(false);
-    alert(`Data "${recordPindah.nama}" berhasil dicatat sebagai Pindah Domisili.`);
+    await swalAlert(`Data "${recordPindah.nama}" berhasil dicatat sebagai Pindah Domisili.`, 'success', 'Pindah Dicatat');
 });
 
 function renderPindah() {
@@ -928,7 +965,7 @@ function renderSuratKeluar() {
 document.getElementById('form-add-surat-masuk')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const targetRT = getTargetRT(this);
-    if (!targetRT) { alert('Pilih RT tujuan!'); return; }
+    if (!targetRT) { await swalAlert('Pilih RT tujuan!', 'info'); return; }
     const noReg = generateNoReg();
     await appendDataToStorage(targetRT, 'sm', {
         noReg, no: document.getElementById('input-sm-no').value,
@@ -938,13 +975,13 @@ document.getElementById('form-add-surat-masuk')?.addEventListener('submit', asyn
         perihal: document.getElementById('input-sm-perihal').value
     });
     renderSuratMasuk(); hideModal('modal-add-surat-masuk');
-    alert(`Surat Masuk disimpan! No. Reg: ${noReg}`);
+    await swalAlert(`Surat Masuk disimpan! No. Reg: ${noReg}`, 'success', 'Tersimpan');
 });
 
 document.getElementById('form-add-surat-keluar')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const targetRT = getTargetRT(this);
-    if (!targetRT) { alert('Pilih RT tujuan!'); return; }
+    if (!targetRT) { await swalAlert('Pilih RT tujuan!', 'info'); return; }
     const noReg = generateNoReg();
     await appendDataToStorage(targetRT, 'sk', {
         noReg, no: document.getElementById('input-sk-no').value,
@@ -954,7 +991,7 @@ document.getElementById('form-add-surat-keluar')?.addEventListener('submit', asy
         perihal: document.getElementById('input-sk-perihal').value
     });
     renderSuratKeluar(); hideModal('modal-add-surat-keluar'); switchSuratTab('keluar');
-    alert(`Surat Keluar disimpan! No. Reg: ${noReg}`);
+    await swalAlert(`Surat Keluar disimpan! No. Reg: ${noReg}`, 'success', 'Tersimpan');
 });
 
 function renderAgenda() {
@@ -978,7 +1015,7 @@ function renderAgenda() {
 document.getElementById('form-add-agenda')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const targetRT = getTargetRT(this);
-    if (!targetRT) { alert('Pilih RT tujuan!'); return; }
+    if (!targetRT) { await swalAlert('Pilih RT tujuan!', 'info'); return; }
     const noReg = generateNoReg();
     await appendDataToStorage(targetRT, 'agenda', {
         noReg, nama: document.getElementById('input-agenda-nama').value,
@@ -987,7 +1024,7 @@ document.getElementById('form-add-agenda')?.addEventListener('submit', async fun
         ponsel: document.getElementById('input-agenda-ponsel').value
     });
     renderAgenda(); hideModal('modal-add-agenda');
-    alert(`Agenda disimpan! No. Reg: ${noReg}`);
+    await swalAlert(`Agenda disimpan! No. Reg: ${noReg}`, 'success', 'Tersimpan');
 });
 
 function renderLapor() {
@@ -1007,7 +1044,7 @@ function renderLapor() {
 document.getElementById('form-add-lapor')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const targetRT = getTargetRT(this);
-    if (!targetRT) { alert('Pilih RT tujuan!'); return; }
+    if (!targetRT) { await swalAlert('Pilih RT tujuan!', 'info'); return; }
     const noReg = generateNoReg();
     await appendDataToStorage(targetRT, 'lapor', {
         noReg, tgl: new Date().toLocaleDateString('id-ID'),
@@ -1017,7 +1054,7 @@ document.getElementById('form-add-lapor')?.addEventListener('submit', async func
         isi: document.getElementById('input-lapor-isi').value
     });
     renderLapor(); hideModal('modal-add-lapor');
-    alert(`Laporan dikirim! No. Reg: ${noReg}`);
+    await swalAlert(`Laporan dikirim! No. Reg: ${noReg}`, 'success', 'Laporan Terkirim');
 });
 
 function renderDokumentasi() {
@@ -1040,7 +1077,7 @@ function renderDokumentasi() {
 document.getElementById('form-add-dokumentasi')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const targetRT = getTargetRT(this);
-    if (!targetRT) { alert('Pilih RT tujuan!'); return; }
+    if (!targetRT) { await swalAlert('Pilih RT tujuan!', 'info'); return; }
     const noReg = generateNoReg();
     await appendDataToStorage(targetRT, 'dok', {
         noReg, kegiatan: document.getElementById('input-dok-kegiatan').value,
@@ -1048,7 +1085,7 @@ document.getElementById('form-add-dokumentasi')?.addEventListener('submit', asyn
         ponsel: document.getElementById('input-dok-ponsel').value
     });
     renderDokumentasi(); hideModal('modal-add-dokumentasi');
-    alert(`Dokumentasi diupload! No. Reg: ${noReg}`);
+    await swalAlert(`Dokumentasi diupload! No. Reg: ${noReg}`, 'success', 'Tersimpan');
 });
 
 async function renderUserManagement() {
@@ -1097,7 +1134,8 @@ async function renderUserManagement() {
 }
 
 async function verifyUser(username) {
-    if (!confirm(`Verifikasi akun "${username}" agar dapat menggunakan aplikasi?`)) return;
+    const ok3 = await swalConfirm(`Verifikasi akun "${username}" agar dapat menggunakan aplikasi?`, 'Verifikasi User', 'question');
+    if (!ok3) return;
     showLoading(true);
     let users = await firebaseGet('rtku_users') || {};
     if (users[username]) {
@@ -1105,14 +1143,15 @@ async function verifyUser(username) {
         await firebasePut('rtku_users', users);
         await renderUserManagement();
         showLoading(false);
-        alert(`User ${username} berhasil diverifikasi!`);
+        await swalAlert(`User ${username} berhasil diverifikasi!`, 'success');
     } else {
         showLoading(false);
     }
 }
 
 async function deleteUser(username) {
-    if (!confirm(`Hapus user '${username}' beserta SELURUH datanya?`)) return;
+    const ok4 = await swalConfirm(`Hapus user '${username}' beserta SELURUH datanya? Tindakan ini tidak dapat dibatalkan.`, 'Hapus User?');
+    if (!ok4) return;
     showLoading(true);
     let users = await firebaseGet('rtku_users') || {};
     delete users[username];
@@ -1124,7 +1163,7 @@ async function deleteUser(username) {
     }
     await renderUserManagement(); await populateAdminSelector();
     showLoading(false);
-    alert(`User ${username} berhasil dihapus.`);
+    await swalAlert(`User ${username} berhasil dihapus.`, 'success');
 }
 
 function openChangePassword(username) {
@@ -1143,16 +1182,16 @@ document.getElementById('form-ganti-password')?.addEventListener('submit', async
         users[username].password = newPwd;
         await firebasePut('rtku_users', users);
         showLoading(false);
-        alert(`Password ${username} berhasil diubah!`);
+        await swalAlert(`Password ${username} berhasil diubah!`, 'success');
         hideModal('modal-ganti-password');
     } else {
         showLoading(false);
     }
 });
 
-function removeDevice(username) {
-    if (confirm(`Paksa logout perangkat untuk user '${username}'?`))
-        alert(`Perangkat untuk user ${username} telah dihapus. Mereka harus login ulang.`);
+async function removeDevice(username) {
+    const ok5 = await swalConfirm(`Paksa logout perangkat untuk user '${username}'?`, 'Paksa Logout', 'question');
+    if (ok5) await swalAlert(`Perangkat untuk user ${username} telah dihapus. Mereka harus login ulang.`, 'info');
 }
 
 // ======================== ARSIP DATA (superadmin only) ========================
@@ -1267,25 +1306,27 @@ async function renderArsipAnggota() {
 }
 
 async function hapusPermanenArsipKK(index) {
-    if (!confirm('Apakah Anda yakin ingin menghapus arsip KK ini secara PERMANEN? Data yang dihapus tidak dapat dikembalikan.')) return;
+    const ok6 = await swalConfirm('Hapus arsip KK ini secara PERMANEN? Data yang dihapus tidak dapat dikembalikan.', 'Hapus Permanen!');
+    if (!ok6) return;
     showLoading(true);
     let data = await firebaseGet('superadmin_arsip_kk') || [];
     data.splice(index, 1);
     await firebasePut('superadmin_arsip_kk', data);
     await renderArsipKK();
     showLoading(false);
-    alert('Arsip KK berhasil dihapus permanen.');
+    await swalAlert('Arsip KK berhasil dihapus permanen.', 'success');
 }
 
 async function hapusPermanenArsipAnggota(index) {
-    if (!confirm('Apakah Anda yakin ingin menghapus arsip anggota ini secara PERMANEN? Data yang dihapus tidak dapat dikembalikan.')) return;
+    const ok7 = await swalConfirm('Hapus arsip anggota ini secara PERMANEN? Data yang dihapus tidak dapat dikembalikan.', 'Hapus Permanen!');
+    if (!ok7) return;
     showLoading(true);
     let data = await firebaseGet('superadmin_arsip_anggota') || [];
     data.splice(index, 1);
     await firebasePut('superadmin_arsip_anggota', data);
     await renderArsipAnggota();
     showLoading(false);
-    alert('Arsip Anggota berhasil dihapus permanen.');
+    await swalAlert('Arsip Anggota berhasil dihapus permanen.', 'success');
 }
 
 // Auto-login jika session_user ada
