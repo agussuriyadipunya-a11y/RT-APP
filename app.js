@@ -519,6 +519,7 @@ function refreshSection(id) {
     else if (id === 'dokumentasi'){ renderDokumentasi(); }
     else if (id === 'pindah-domisili') { renderPindah(); }
     else if (id === 'bpjs-kesehatan')  { renderBpjs(); }
+    else if (id === 'update-kependudukan') { renderKependudukan(); }
     else if (id === 'manajemen-user')  { renderUserManagement(); }
     else if (id === 'kepengurusan-rt') { renderEditKepengurusan(); }
     else if (id === 'tentang-aplikasi-admin') { renderEditTentang(); }
@@ -668,6 +669,154 @@ window.hapusBpjs = async function(rtUser, index) {
     await renderBpjs();
     showLoading(false);
     await swalAlert('Data pengajuan BPJS berhasil dihapus.', 'success');
+};
+
+// ======================== UPDATE KEPENDUDUKAN (VIP) ========================
+document.getElementById('form-kependudukan')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const cekPengantar = document.getElementById('kependudukan-cek-pengantar').checked;
+    const cekKtp       = document.getElementById('kependudukan-cek-ktp').checked;
+    const cekKk        = document.getElementById('kependudukan-cek-kk').checked;
+
+    if (!cekPengantar || !cekKtp || !cekKk) {
+        await swalAlert('Semua berkas kelengkapan (Surat Pengantar RT, KTP, dan KK) wajib dilampirkan/dicentang!', 'warning', 'Berkas Belum Lengkap');
+        return;
+    }
+
+    showLoading(true);
+    const rtTarget = (currentUser === 'admin') ? activeRT : currentUser;
+    const kepKey = `${rtTarget}_rtku_kependudukan`;
+    let arr = await firebaseGet(kepKey) || [];
+
+    const dataBaru = {
+        id: 'KEP-' + new Date().getTime(),
+        tanggal: new Date().toLocaleDateString('id-ID'),
+        jenis: document.getElementById('kependudukan-jenis').value,
+        nama: document.getElementById('kependudukan-nama').value,
+        nik: document.getElementById('kependudukan-nik').value,
+        nokk: document.getElementById('kependudukan-nokk').value,
+        ponsel: document.getElementById('kependudukan-ponsel').value,
+        keterangan: document.getElementById('kependudukan-keterangan').value,
+        status: 'WAITING'
+    };
+
+    arr.push(dataBaru);
+    await firebasePut(kepKey, arr);
+
+    this.reset();
+    document.getElementById('kependudukan-form-area').style.display = 'none';
+    await renderKependudukan();
+    showLoading(false);
+    await swalAlert('Pengajuan Update Kependudukan berhasil dikirim!', 'success', 'Terkirim');
+});
+
+async function renderKependudukan() {
+    const tbody = document.getElementById('tbody-kependudukan');
+    if (!tbody) return;
+
+    let allData = [];
+
+    const btnAjukan = document.getElementById('btn-ajukan-kependudukan');
+    if (btnAjukan) {
+        btnAjukan.style.display = (currentUser === 'admin') ? 'none' : 'block';
+    }
+
+    if (currentUser === 'admin') {
+        let users = await firebaseGet('rtku_users') || {};
+        for (const u of Object.keys(users)) {
+            if (u === 'admin') continue;
+            const arr = await firebaseGet(`${u}_rtku_kependudukan`) || [];
+            arr.forEach((item, idx) => {
+                allData.push({ ...item, _rtUser: u, _rtName: users[u]?.name || u, _idx: idx });
+            });
+        }
+    } else {
+        const arr = await firebaseGet(`${currentUser}_rtku_kependudukan`) || [];
+        arr.forEach((item, idx) => {
+            allData.push({ ...item, _rtUser: currentUser, _rtName: '', _idx: idx });
+        });
+    }
+
+    allData.reverse();
+    tbody.innerHTML = '';
+
+    if (allData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="table-empty-state"><i class="fa-solid fa-folder-open"></i> Belum ada data pengajuan kependudukan.</td></tr>`;
+        return;
+    }
+
+    allData.forEach(item => {
+        let badgeColor = item.status === 'WAITING' ? '#f59e0b' : (item.status === 'PROCESS' ? '#3b82f6' : '#10b981');
+        let statusHtml = '';
+
+        if (currentUser === 'admin') {
+            statusHtml = `
+                <select class="form-control" style="padding:0.2rem; font-size:0.75rem; width:100px; border-color:${badgeColor}; color:${badgeColor}; font-weight:bold;" 
+                        onchange="updateStatusKependudukan('${item._rtUser}', ${item._idx}, this.value)">
+                    <option value="WAITING" ${item.status === 'WAITING' ? 'selected' : ''}>WAITING</option>
+                    <option value="PROCESS" ${item.status === 'PROCESS' ? 'selected' : ''}>PROCESS</option>
+                    <option value="DONE" ${item.status === 'DONE' ? 'selected' : ''}>DONE</option>
+                </select>
+            `;
+        } else {
+            statusHtml = `<span class="badge" style="background:${badgeColor}; color:#fff;">${item.status}</span>`;
+        }
+
+        let aksiHtml = '';
+        if (currentUser === 'admin') {
+            aksiHtml = `<button class="btn btn-outline" style="color:var(--danger-color);border-color:var(--danger-color);padding:0.2rem 0.5rem;font-size:0.75rem;margin-top:0.3rem;" onclick="hapusKependudukan('${item._rtUser}', ${item._idx})"><i class="fa-solid fa-trash"></i></button>`;
+        } else {
+            aksiHtml = '<span style="font-size:0.75rem; color:var(--text-secondary);"><i class="fa-solid fa-eye"></i> Lihat Saja</span>';
+        }
+
+        const rtLabel = currentUser === 'admin' ? `<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.2rem;"><span class="badge badge-success">${item._rtName || item._rtUser}</span></div>` : '';
+
+        tbody.innerHTML += `
+        <tr>
+            <td style="white-space:nowrap;">${item.tanggal}<br><span style="font-size:0.7rem;color:var(--text-secondary);">${item.id}</span>${rtLabel}</td>
+            <td><span class="badge badge-primary">${item.jenis}</span></td>
+            <td style="font-weight:600;">${item.nama}</td>
+            <td style="font-family:monospace;">${item.nik}</td>
+            <td style="font-family:monospace;">${item.nokk}</td>
+            <td><a href="https://wa.me/62${item.ponsel.replace(/^0/,'')}" target="_blank" style="color:var(--success-color);text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> ${item.ponsel}</a></td>
+            <td style="font-size:0.8rem;">
+                <div style="color:var(--success-color);"><i class="fa-solid fa-check"></i> Pengantar</div>
+                <div style="color:var(--success-color);"><i class="fa-solid fa-check"></i> KTP</div>
+                <div style="color:var(--success-color);"><i class="fa-solid fa-check"></i> KK</div>
+            </td>
+            <td>${statusHtml}</td>
+            <td>${aksiHtml}</td>
+        </tr>
+        `;
+    });
+}
+
+window.updateStatusKependudukan = async function(rtUser, index, newStatus) {
+    showLoading(true);
+    const kepKey = `${rtUser}_rtku_kependudukan`;
+    let arr = await firebaseGet(kepKey) || [];
+    if (arr[index]) {
+        arr[index].status = newStatus;
+        await firebasePut(kepKey, arr);
+        await renderKependudukan();
+        showLoading(false);
+        await swalAlert(`Status pengajuan berhasil diubah menjadi ${newStatus}`, 'success');
+    } else {
+        showLoading(false);
+    }
+};
+
+window.hapusKependudukan = async function(rtUser, index) {
+    const ok = await swalConfirm('Hapus data pengajuan Kependudukan ini?', 'Hapus Pengajuan');
+    if (!ok) return;
+    showLoading(true);
+    const kepKey = `${rtUser}_rtku_kependudukan`;
+    let arr = await firebaseGet(kepKey) || [];
+    arr.splice(index, 1);
+    await firebasePut(kepKey, arr);
+    await renderKependudukan();
+    showLoading(false);
+    await swalAlert('Data pengajuan berhasil dihapus.', 'success');
 };
 
 // ======================== NAVIGATION ========================
