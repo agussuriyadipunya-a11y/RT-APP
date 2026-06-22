@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Lapor Warga - RT-KU</title>
+    
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e293b">
+
+    <link href="https://fonts.googleapis.com/css2?family=Product+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <meta name="description" content="Portal pelaporan warga terpusat">
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-image: url('bg.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-color: var(--bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+        .portal-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow-lg);
+        }
+        .portal-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .portal-header img {
+            width: 80px;
+            margin-bottom: 1rem;
+        }
+        .portal-header h2 {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .portal-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .alert-box {
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .alert-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+        .alert-success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #4ade80;
+        }
+        .btn-lapor {
+            width: 100%;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div style="margin-top: 1rem; font-weight: 500; color: white;">Memproses data...</div>
+    </div>
+
+    <div class="portal-card">
+        <div class="portal-header">
+            <img src="logo.png" alt="Logo RT-KU">
+            <h2>Portal Lapor Warga</h2>
+            <p>Sampaikan laporan / aduan Anda ke pengurus RT secara otomatis.</p>
+        </div>
+
+        <div id="alert-box" class="alert-box"></div>
+
+        <form id="form-portal-lapor">
+            <div class="form-group">
+                <label>Nama Lengkap (Kepala Keluarga)</label>
+                <input type="text" id="input-nama" class="form-control" placeholder="Contoh: Budi Santoso" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Nomor Ponsel (Data Kepala Keluarga)</label>
+                <input type="text" id="input-ponsel" class="form-control" pattern="[0-9]{10,13}" placeholder="Contoh: 081234567890" required>
+            </div>
+
+            <div class="form-group">
+                <label>Nomor Registrasi Keluarga (No. Reg)</label>
+                <input type="text" id="input-noreg" class="form-control" placeholder="Contoh: REG-1A2B3C" required>
+            </div>
+
+            <div class="form-group">
+                <label>Kategori Laporan</label>
+                <select id="input-kategori" class="form-control" required>
+                    <option value="">-- Pilih Kategori --</option>
+                    <option value="Keamanan">Keamanan</option>
+                    <option value="Kebersihan">Kebersihan</option>
+                    <option value="Fasilitas">Fasilitas Umum</option>
+                    <option value="Darurat">Kondisi Darurat</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Isi Keterangan / Laporan</label>
+                <textarea id="input-isi" class="form-control" rows="4" placeholder="Jelaskan detail laporan Anda di sini..." required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lapor">
+                <i class="fa-solid fa-paper-plane"></i> Kirim Laporan
+            </button>
+        </form>
+    </div>
+
+    <script src="lapor.js"></script>
+</body>
+</html>
