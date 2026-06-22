@@ -90,6 +90,9 @@
                 <div class="nav-item" id="nav-manajemen-user" data-target="manajemen-user" style="display:none; color:var(--danger-color);">
                     <i class="fa-solid fa-user-gear"></i> Manajemen User
                 </div>
+                <div class="nav-item" id="nav-kepengurusan" data-target="kepengurusan-rt" style="display:none; color:var(--primary-color);">
+                    <i class="fa-solid fa-sitemap"></i> Kepengurusan RT
+                </div>
                 <div class="nav-item" id="nav-arsip" data-target="arsip-data" style="display:none; color:#f59e0b;">
                     <i class="fa-solid fa-box-archive"></i> Arsip Data
                 </div>
@@ -332,6 +335,42 @@
                 </section>
 
                 <!-- Arsip Data (superadmin only) -->
+                <section id="kepengurusan-rt" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Manajemen Kepengurusan RT</h2>
+                        </div>
+                        <p style="margin-bottom:1.5rem; color:var(--text-secondary);">Kelola data struktur dan alamat sekretariat untuk setiap RT. Pilih RT dari dropdown di atas (pojok kanan).</p>
+                        
+                        <div id="alert-kepengurusan-global" style="display:none; background:#fee2e2; color:#b91c1c; padding:1rem; border-radius:var(--radius-md); margin-bottom:1.5rem;">
+                            <i class="fa-solid fa-circle-exclamation"></i> Harap pilih RT spesifik pada dropdown di pojok kanan atas untuk mengedit kepengurusan. Mode "Semua Data" tidak bisa diedit.
+                        </div>
+
+                        <form id="form-edit-kepengurusan" style="display:none;">
+                            <div class="form-group">
+                                <label class="form-label">Nama Ketua RT</label>
+                                <input type="text" id="input-edit-ketua" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nama Sekretaris</label>
+                                <input type="text" id="input-edit-sekretaris" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nama Bendahara</label>
+                                <input type="text" id="input-edit-bendahara" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Alamat Sekretariat RT</label>
+                                <textarea id="input-edit-alamat" class="form-control" required rows="3"></textarea>
+                            </div>
+                            <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Simpan Perubahan</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- ARSIP DATA (SUPERADMIN) -->
                 <section id="arsip-data" class="page-section">
                     <div class="card">
                         <div class="card-header">
@@ -797,6 +836,41 @@
                 <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
                     <button type="button" class="btn btn-outline" onclick="hideModal('modal-ganti-password')">Batal</button>
                     <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Onboarding Kepengurusan RT (TIDAK BISA DICLOSE MANUAL) -->
+    <div class="modal" id="modal-onboarding-rt" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-sitemap" style="color:var(--primary-color);"></i> Lengkapi Profil RT Anda</h3>
+                <!-- Tidak ada tombol close, wajib diisi -->
+            </div>
+            <form id="form-onboarding-rt">
+                <p style="margin-bottom: 1.5rem; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5;">
+                    Selamat datang! Sebelum mulai menggunakan aplikasi, silakan lengkapi data Kepengurusan RT dan Alamat Sekretariat Anda. <br><br>
+                    <strong>Catatan:</strong> Data ini nantinya hanya bisa diubah oleh Superadmin melalui menu khusus. Pastikan data yang dimasukkan benar.
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Nama Ketua RT</label>
+                    <input type="text" id="input-ob-ketua" class="form-control" required placeholder="Contoh: H. Ahmad Subarjo, S.E.">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nama Sekretaris</label>
+                    <input type="text" id="input-ob-sekretaris" class="form-control" required placeholder="Contoh: Budi Santoso">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nama Bendahara</label>
+                    <input type="text" id="input-ob-bendahara" class="form-control" required placeholder="Contoh: Siti Aminah">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alamat Lengkap Sekretariat RT</label>
+                    <textarea id="input-ob-alamat" class="form-control" required placeholder="Contoh: Jl. Merdeka No. 10, RT 01 RW 05" rows="3"></textarea>
+                </div>
+                <div class="d-flex gap-4 mt-4">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.8rem; font-size: 1.1rem;"><i class="fa-solid fa-check-circle"></i> Simpan & Lanjutkan</button>
                 </div>
             </form>
         </div>

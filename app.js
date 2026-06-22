@@ -215,12 +215,13 @@ async function logout() {
 // ======================== DATA LAYER ========================
 let dataKK = [], dataSuratMasuk = [], dataSuratKeluar = [];
 let dataAgenda = [], dataLapor = [], dataDokumentasi = [], dataPindah = [];
+let dataProfilRT = null;
 
 async function loadData() {
     if (!currentUser) return;
     showLoading(true);
     dataKK = []; dataSuratMasuk = []; dataSuratKeluar = [];
-    dataAgenda = []; dataLapor = []; dataDokumentasi = []; dataPindah = [];
+    dataAgenda = []; dataLapor = []; dataDokumentasi = []; dataPindah = []; dataProfilRT = null;
 
     if (activeRT === 'all') {
         let users = await firebaseGet('rtku_users') || {};
@@ -255,6 +256,7 @@ async function loadData() {
         dataLapor       = await firebaseGet(`${activeRT}_rtku_lapor`) || [];
         dataDokumentasi = await firebaseGet(`${activeRT}_rtku_dok`) || [];
         dataPindah      = await firebaseGet(`${activeRT}_rtku_pindah`) || [];
+        dataProfilRT    = await firebaseGet(`${activeRT}_rtku_profil`) || null;
     }
     showLoading(false);
 }
@@ -282,6 +284,7 @@ async function initApp() {
         selector.style.display     = 'block';
         navManajemen.style.display = 'flex';
         navPindah.style.display    = 'flex';
+        document.getElementById('nav-kepengurusan').style.display = 'flex';
         document.getElementById('nav-arsip').style.display = 'flex';
         await populateAdminSelector();
         document.getElementById('dash-username').innerText = "Super Admin (Global)";
@@ -289,14 +292,85 @@ async function initApp() {
         selector.style.display     = 'none';
         navManajemen.style.display = 'none';
         navPindah.style.display    = 'flex';
+        document.getElementById('nav-kepengurusan').style.display = 'none';
         document.getElementById('nav-arsip').style.display = 'none';
         document.getElementById('dash-username').innerText = currentName;
     }
 
     await loadData();
     updateDashboardStats();
+    renderProfilRT();
     document.querySelector('.nav-item[data-target="dashboard"]').click();
+
+    if (currentUser !== 'admin' && !dataProfilRT) {
+        document.getElementById('modal-onboarding-rt').classList.add('active');
+    }
 }
+
+// ======================== KEPENGURUSAN RT ========================
+function renderProfilRT() {
+    if (!dataProfilRT) {
+        document.getElementById('info-ketua-rt').innerText = '-';
+        document.getElementById('info-sekretaris').innerText = '-';
+        document.getElementById('info-bendahara').innerText = '-';
+        document.getElementById('info-alamat-rt').innerText = 'Belum diatur';
+    } else {
+        document.getElementById('info-ketua-rt').innerText = dataProfilRT.ketua || '-';
+        document.getElementById('info-sekretaris').innerText = dataProfilRT.sekretaris || '-';
+        document.getElementById('info-bendahara').innerText = dataProfilRT.bendahara || '-';
+        document.getElementById('info-alamat-rt').innerText = dataProfilRT.alamat || 'Belum diatur';
+    }
+}
+
+document.getElementById('form-onboarding-rt')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    showLoading(true);
+    const data = {
+        ketua: document.getElementById('input-ob-ketua').value,
+        sekretaris: document.getElementById('input-ob-sekretaris').value,
+        bendahara: document.getElementById('input-ob-bendahara').value,
+        alamat: document.getElementById('input-ob-alamat').value
+    };
+    await firebasePut(`${currentUser}_rtku_profil`, data);
+    dataProfilRT = data;
+    renderProfilRT();
+    hideModal('modal-onboarding-rt');
+    showLoading(false);
+    await swalAlert('Terima kasih, Profil RT berhasil disimpan!', 'success', 'Berhasil');
+});
+
+function renderEditKepengurusan() {
+    if (currentUser !== 'admin') return;
+    if (activeRT === 'all') {
+        document.getElementById('alert-kepengurusan-global').style.display = 'block';
+        document.getElementById('form-edit-kepengurusan').style.display = 'none';
+    } else {
+        document.getElementById('alert-kepengurusan-global').style.display = 'none';
+        document.getElementById('form-edit-kepengurusan').style.display = 'block';
+        
+        document.getElementById('input-edit-ketua').value = dataProfilRT?.ketua || '';
+        document.getElementById('input-edit-sekretaris').value = dataProfilRT?.sekretaris || '';
+        document.getElementById('input-edit-bendahara').value = dataProfilRT?.bendahara || '';
+        document.getElementById('input-edit-alamat').value = dataProfilRT?.alamat || '';
+    }
+}
+
+document.getElementById('form-edit-kepengurusan')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (activeRT === 'all') return;
+    showLoading(true);
+    const data = {
+        ketua: document.getElementById('input-edit-ketua').value,
+        sekretaris: document.getElementById('input-edit-sekretaris').value,
+        bendahara: document.getElementById('input-edit-bendahara').value,
+        alamat: document.getElementById('input-edit-alamat').value
+    };
+    await firebasePut(`${activeRT}_rtku_profil`, data);
+    dataProfilRT = data;
+    renderProfilRT(); 
+    showLoading(false);
+    await swalAlert(`Profil kepengurusan berhasil diperbarui!`, 'success', 'Disimpan');
+});
 
 async function populateAdminSelector() {
     const selector = document.getElementById('admin-rt-selector');
@@ -315,6 +389,7 @@ async function changeAdminView(val) {
         (val === 'all') ? "Super Admin (Global)" : (users[val]?.name || val);
     await loadData(); 
     updateDashboardStats();
+    renderProfilRT();
     const active = document.querySelector('.nav-item.active')?.getAttribute('data-target');
     refreshSection(active);
 }
@@ -327,6 +402,7 @@ function refreshSection(id) {
     else if (id === 'dokumentasi'){ renderDokumentasi(); }
     else if (id === 'pindah-domisili') { renderPindah(); }
     else if (id === 'manajemen-user')  { renderUserManagement(); }
+    else if (id === 'kepengurusan-rt') { renderEditKepengurusan(); }
     else if (id === 'arsip-data')      { renderArsip(); }
 }
 
