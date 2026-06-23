@@ -1273,7 +1273,11 @@ async function showModal(id) {
             Object.keys(users).forEach(u => {
                 if (u !== 'admin') { opts += `<option value="${u}">Data ${users[u].name} (${u})</option>`; hasUsers = true; }
             });
-            if (!hasUsers) { await swalAlert('Belum ada akun RT terdaftar.', 'info'); return; }
+            if (!hasUsers) { 
+                showLoading(false);
+                await swalAlert('Belum ada akun RT terdaftar.', 'info'); 
+                return; 
+            }
             const div = document.createElement('div');
             div.className = 'form-group dynamic-rt-target';
             div.style.cssText = 'background:#fef2f2;padding:0.75rem;border-radius:var(--radius-md);border:1px dashed var(--danger-color);';
