@@ -80,6 +80,7 @@
                 <div class="nav-item" data-target="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
                 <div class="nav-item" data-target="surat"><i class="fa-solid fa-envelope-open-text"></i> Surat Menyurat</div>
                 <div class="nav-item" data-target="data-masyarakat"><i class="fa-solid fa-users"></i> Data Masyarakat</div>
+                <div class="nav-item" data-target="lapor-domisili"><i class="fa-solid fa-house-user"></i> Lapor Domisili</div>
                 <div class="nav-item" data-target="agenda"><i class="fa-solid fa-calendar-days"></i> Agenda RT</div>
                 <div class="nav-item" data-target="lapor"><i class="fa-solid fa-bullhorn"></i> Lapor RT</div>
                 <div class="nav-item" data-target="dokumentasi"><i class="fa-solid fa-images"></i> Dokumentasi RT</div>
@@ -131,6 +132,14 @@
                     <div class="card" style="margin-bottom: 2rem;">
                         <div class="card-header"><h2 class="card-title">Selamat Datang di RT-KU</h2></div>
                         <p class="mb-4">Ruang kerja untuk <strong id="dash-username"></strong>.</p>
+                        <!-- Notifikasi Lapor Domisili Kedaluwarsa -->
+                        <div id="notif-domisili-container" style="display: none; margin-bottom: 1rem;">
+                            <div class="alert" style="background:#fef2f2; border-left:4px solid var(--danger-color); padding:1rem; border-radius:var(--radius-md);">
+                                <h4 style="color:var(--danger-color); margin-bottom:0.5rem; font-size:1.1rem;"><i class="fa-solid fa-triangle-exclamation"></i> Peringatan: Masa Berlaku Tamu / Pindah Sementara Telah Habis</h4>
+                                <ul id="list-notif-domisili" style="margin-left: 1.5rem; color: var(--danger-color); font-weight: 500;">
+                                </ul>
+                            </div>
+                        </div>
                         <div class="d-flex gap-4" style="flex-wrap: wrap;">
                             <div class="card" style="flex:1; min-width: 150px; border-left:4px solid var(--primary-color);">
                                 <h3>Total KK</h3>
@@ -307,6 +316,34 @@
                             <button class="btn btn-primary" onclick="showModal('modal-add-dokumentasi')"><i class="fa-solid fa-upload"></i> Upload Foto</button>
                         </div>
                         <div id="grid-dokumentasi" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:1rem;"></div>
+                    </div>
+                </section>
+
+                <!-- Lapor Domisili -->
+                <section id="lapor-domisili" class="page-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Data Lapor Domisili (Tamu & Pindah Sementara)</h2>
+                            <button class="btn btn-primary" onclick="showModalLaporDomisili()"><i class="fa-solid fa-plus"></i> Tambah Data</button>
+                        </div>
+                        <div class="table-responsive mt-4">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Data KK</th>
+                                        <th>NIK</th>
+                                        <th>Nama Lengkap</th>
+                                        <th>Status</th>
+                                        <th>Tanggal Lapor</th>
+                                        <th>Masa Berlaku</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-lapor-domisili">
+                                    <!-- Data lapor domisili dimuat di sini -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
 
@@ -1245,6 +1282,52 @@
             <div class="d-flex gap-4 mt-4" style="justify-content:center;">
                 <button type="button" class="btn btn-outline" onclick="hideModal('modal-view-detail')">Tutup</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Add Lapor Domisili -->
+    <div class="modal-overlay" id="modal-add-lapor-domisili">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <h2>Lapor Domisili (Tamu/Pindah Sementara)</h2>
+                <span class="modal-close" onclick="hideModal('modal-add-lapor-domisili')">&times;</span>
+            </div>
+            <form onsubmit="simpanLaporDomisili(event)">
+                <div class="form-group">
+                    <label class="form-label">Data Warga (KK) Tujuan Domisili</label>
+                    <select id="ld-no-kk" class="form-control" required>
+                        <option value="">-- Pilih KK --</option>
+                        <!-- Loaded dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">NIK Tamu/Keluarga Sementara</label>
+                    <input type="text" id="ld-nik" class="form-control" required placeholder="Masukkan 16 digit NIK">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nama Lengkap</label>
+                    <input type="text" id="ld-nama" class="form-control" required placeholder="Nama lengkap sesuai KTP">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status Domisili</label>
+                    <select id="ld-status" class="form-control" required>
+                        <option value="Tamu">Tamu</option>
+                        <option value="Pindah Sementara">Pindah Sementara</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tanggal Lapor</label>
+                    <input type="date" id="ld-tgl-lapor" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Masa Berlaku (Hingga Tanggal)</label>
+                    <input type="date" id="ld-masa-berlaku" class="form-control" required>
+                </div>
+                <div class="d-flex gap-4 mt-4" style="justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="hideModal('modal-add-lapor-domisili')">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Simpan Data</button>
+                </div>
+            </form>
         </div>
     </div>
 

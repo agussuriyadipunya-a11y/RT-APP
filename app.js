@@ -303,13 +303,14 @@ async function logout() {
 // ======================== DATA LAYER ========================
 let dataKK = [], dataSuratMasuk = [], dataSuratKeluar = [];
 let dataAgenda = [], dataLapor = [], dataDokumentasi = [], dataPindah = [];
+let dataLaporDomisili = [];
 let dataProfilRT = null;
 
 async function loadData() {
     if (!currentUser) return;
     showLoading(true);
     dataKK = []; dataSuratMasuk = []; dataSuratKeluar = [];
-    dataAgenda = []; dataLapor = []; dataDokumentasi = []; dataPindah = []; dataProfilRT = null;
+    dataAgenda = []; dataLapor = []; dataDokumentasi = []; dataPindah = []; dataLaporDomisili = []; dataProfilRT = null;
 
     if (activeRT === 'all') {
         let users = await firebaseGet('rtku_users') || {};
@@ -325,8 +326,10 @@ async function loadData() {
                 const laporData = await firebaseGet(`${u}_rtku_lapor`) || [];
                 const dokData = await firebaseGet(`${u}_rtku_dok`) || [];
                 const pindahRT = await firebaseGet(`${u}_rtku_pindah`) || [];
+                const laporDomisiliData = await firebaseGet(`${u}_rtku_lapordomisili`) || [];
                 
                 dataKK = dataKK.concat(kkData);
+                dataLaporDomisili = dataLaporDomisili.concat(laporDomisiliData);
                 dataSuratMasuk = dataSuratMasuk.concat(smData);
                 dataSuratKeluar = dataSuratKeluar.concat(skData);
                 dataAgenda = dataAgenda.concat(agendaData);
@@ -344,6 +347,7 @@ async function loadData() {
         dataLapor       = await firebaseGet(`${activeRT}_rtku_lapor`) || [];
         dataDokumentasi = await firebaseGet(`${activeRT}_rtku_dok`) || [];
         dataPindah      = await firebaseGet(`${activeRT}_rtku_pindah`) || [];
+        dataLaporDomisili = await firebaseGet(`${activeRT}_rtku_lapordomisili`) || [];
         dataProfilRT    = await firebaseGet(`${activeRT}_rtku_profil`) || null;
     }
     showLoading(false);
@@ -1249,6 +1253,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
             dashboard: 'Dashboard', surat: 'Surat Menyurat',
             'data-masyarakat': 'Data Masyarakat', agenda: 'Agenda RT',
             lapor: 'Lapor RT', dokumentasi: 'Dokumentasi RT',
+            'lapor-domisili': 'Lapor Domisili',
             'pindah-domisili': 'Pindah Domisili',
             'bpjs-kesehatan': 'BPJS Kesehatan',
             'update-kependudukan': 'Update Kependudukan',
@@ -1338,6 +1343,28 @@ async function updateDashboardStats() {
     if (pindahEl) {
         pindahEl.innerText = dataPindah.length;
         if (pindahCard) pindahCard.style.display = (currentUser !== 'admin') ? 'block' : 'none';
+    }
+
+    // Notifikasi Domisili Kedaluwarsa
+    const notifContainer = document.getElementById('notif-domisili-container');
+    const listNotif = document.getElementById('list-notif-domisili');
+    if (notifContainer && listNotif) {
+        listNotif.innerHTML = '';
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let hasExpired = false;
+        
+        dataLaporDomisili.forEach(d => {
+            if (d.masaBerlaku) {
+                const expDate = new Date(d.masaBerlaku);
+                if (expDate < today) {
+                    hasExpired = true;
+                    listNotif.innerHTML += `<li>${d.nama} (${d.status}) - NIK: ${d.nik} (Kedaluwarsa sejak: ${d.masaBerlaku})</li>`;
+                }
+            }
+        });
+        
+        notifContainer.style.display = hasExpired ? 'block' : 'none';
     }
 
     // Populate placeholder RT Info
@@ -1862,6 +1889,104 @@ function renderPindah() {
             <td>${p.alasan}${p.keterangan ? ' — ' + p.keterangan : ''}</td>
         </tr>`;
     });
+}
+
+// ======================== LAPOR DOMISILI ========================
+function showModalLaporDomisili() {
+    const selectKK = document.getElementById('ld-no-kk');
+    selectKK.innerHTML = '<option value="">-- Pilih KK --</option>';
+    dataKK.forEach(k => {
+        selectKK.innerHTML += `<option value="${k.noKK}">${k.noKK} - ${k.kepalaKeluarga}</option>`;
+    });
+    
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('ld-tgl-lapor').value = today;
+    
+    showModal('modal-add-lapor-domisili');
+}
+
+async function simpanLaporDomisili(e) {
+    e.preventDefault();
+    if (activeRT === 'all') {
+        swalAlert('Pilih RT spesifik terlebih dahulu.', 'warning');
+        return;
+    }
+    const noKK = document.getElementById('ld-no-kk').value;
+    const nik = document.getElementById('ld-nik').value;
+    const nama = document.getElementById('ld-nama').value;
+    const status = document.getElementById('ld-status').value;
+    const tglLapor = document.getElementById('ld-tgl-lapor').value;
+    const masaBerlaku = document.getElementById('ld-masa-berlaku').value;
+
+    const dataBaru = { id: Date.now().toString(), noKK, nik, nama, status, tglLapor, masaBerlaku };
+    
+    await appendDataToStorage(activeRT, 'lapordomisili', dataBaru);
+    swalAlert('Data domisili berhasil disimpan!');
+    hideModal('modal-add-lapor-domisili');
+    renderLaporDomisili();
+}
+
+function renderLaporDomisili() {
+    const tbody = document.getElementById('tbody-lapor-domisili');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    if (dataLaporDomisili.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="table-empty-state"><i class="fa-solid fa-house-user"></i> Belum ada data domisili sementara.</td></tr>`;
+        return;
+    }
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    dataLaporDomisili.forEach(d => {
+        const expDate = new Date(d.masaBerlaku);
+        const isExpired = expDate < today;
+        const rowStyle = isExpired ? 'background-color: #fef2f2;' : '';
+        const badgeClass = isExpired ? 'badge-danger' : 'badge-success';
+        const expLabel = isExpired ? '(Kedaluwarsa)' : '';
+        
+        const canEdit = !(currentUser === 'admin' && activeRT === 'all');
+        const hapusBtn = canEdit ? `<button class="btn btn-danger btn-sm" style="padding:0.25rem 0.5rem;font-size:0.8rem;" onclick="hapusLaporDomisili('${d.id}')"><i class="fa-solid fa-trash"></i> Hapus</button>` : '-';
+        
+        const kkInfo = dataKK.find(k => k.noKK === d.noKK);
+        const namaKK = kkInfo ? kkInfo.kepalaKeluarga : '-';
+        
+        tbody.innerHTML += `
+        <tr style="${rowStyle}">
+            <td style="font-weight:600;"><div style="font-family:monospace;">${d.noKK}</div><div style="font-size:0.8rem;color:var(--text-secondary);">${namaKK}</div></td>
+            <td style="font-family:monospace;">${d.nik}</td>
+            <td style="font-weight:500;">${d.nama}</td>
+            <td><span class="badge ${d.status === 'Tamu' ? 'badge-primary' : 'badge-warning'}">${d.status}</span></td>
+            <td>${d.tglLapor}</td>
+            <td><span class="badge ${badgeClass}">${d.masaBerlaku} <br><small>${expLabel}</small></span></td>
+            <td>${hapusBtn}</td>
+        </tr>`;
+    });
+}
+
+async function hapusLaporDomisili(id) {
+    if (activeRT === 'all') return;
+    const res = await Swal.fire({
+        title: 'Hapus Data?',
+        text: 'Data domisili ini akan dihapus permanen.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#ef4444'
+    });
+    if (!res.isConfirmed) return;
+
+    showLoading(true);
+    const key = `${activeRT}_rtku_lapordomisili`;
+    let arr = await firebaseGet(key) || [];
+    arr = arr.filter(d => d.id !== id);
+    await firebasePut(key, arr);
+    await loadData();
+    renderLaporDomisili();
+    showLoading(false);
+    swalAlert('Data domisili berhasil dihapus.');
 }
 
 function switchSuratTab(tab) {
